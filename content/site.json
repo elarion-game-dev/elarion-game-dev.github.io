@@ -13,11 +13,11 @@
       "label": "Home"
     },
     "news": {
-      "enabled": true,
+      "enabled": false,
       "label": "News"
     },
     "press": {
-      "enabled": true,
+      "enabled": false,
       "label": "Press Kit"
     },
     "style": "bar-stepped",
