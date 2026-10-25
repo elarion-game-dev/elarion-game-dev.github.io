@@ -3,9 +3,9 @@
 // that triggers the deploy workflow.
 
 import { DEPLOY } from '../assets/lib/deploy.mjs';
-import { PREVIEW_PAGES, renderPage } from '../assets/lib/render.mjs';
+import { pageIdForPath, previewPages, renderPage, sortedPosts } from '../assets/lib/render.mjs';
 import { DEFAULT_SETTINGS, normalizeSettings } from '../assets/lib/settings.mjs';
-import { FONTS, PRESETS, fontFaces, fontStack, themeCss } from '../assets/lib/themes.mjs';
+import { FONTS, PRESETS, PRESET_KEYS, fontFaces, fontStack, themeCss } from '../assets/lib/themes.mjs';
 import { getPath, setPath, slugify } from '../assets/lib/util.mjs';
 import { ConflictError, GitHub } from './github.js';
 import { PANELS } from './panels.js';
@@ -41,6 +41,7 @@ const app = {
   open: new Set(),
   panel: PANELS.some((p) => p.id === location.hash.slice(1)) ? location.hash.slice(1) : 'overview',
   previewPage: 'home',
+  previewSuccess: false,
   device: 'desktop',
   publishing: false,
 
@@ -56,7 +57,32 @@ const app = {
     history.replaceState(null, '', `#${id}`);
     renderNav();
     renderPanel();
+    // Follow along in the preview, but stay on a news post while editing news.
+    const page = PANELS.find((p) => p.id === id)?.page;
+    if (page && !(page === 'news' && app.previewPage.startsWith('post:'))) setPreviewPage(page);
     ui.editor?.focus({ preventScroll: true });
+  },
+  setPreviewSuccess(show) {
+    app.previewSuccess = show;
+    renderPanel();
+    if (app.previewPage !== 'home') setPreviewPage('home', 'subscribe');
+    else {
+      pendingAnchor = 'subscribe';
+      renderPreview();
+    }
+    ui.successToggle?.setAttribute('aria-pressed', String(show));
+  },
+  isPublishedSlug(slug) {
+    try {
+      return JSON.parse(app.savedJson).news.posts.some((p) => p.slug === slug);
+    } catch {
+      return false;
+    }
+  },
+  /** Show the post at this index of the editor's list in the preview. */
+  previewPost(index) {
+    const slug = app.normalized().news.posts[index]?.slug;
+    if (slug) setPreviewPage(`post:${slug}`);
   },
   isOpen: (key) => app.open.has(key),
   setOpen: (key, open) => (open ? app.open.add(key) : app.open.delete(key)),
@@ -250,13 +276,15 @@ function showWorkspace() {
     )
   );
 
-  const pageSelect = h(
-    'select',
-    { class: 'input input-sm', 'aria-label': 'Preview page' },
-    Object.entries(PREVIEW_PAGES).map(([id, label]) => h('option', { value: id }, label))
-  );
+  const pageSelect = h('select', { class: 'input input-sm preview-select', 'aria-label': 'Preview page' });
   pageSelect.addEventListener('change', () => setPreviewPage(pageSelect.value));
   ui.pageSelect = pageSelect;
+  ui.hiddenBadge = h('span', { class: 'preview-hidden', hidden: true, title: 'Switched off: visitors cannot see this page' }, icon('eye'), 'Hidden on live site');
+  ui.successToggle = h(
+    'button',
+    { type: 'button', class: 'icon-btn', title: 'Preview the message shown after signing up', 'aria-label': 'Preview the after-sign-up message', 'aria-pressed': String(app.previewSuccess), onclick: () => app.setPreviewSuccess(!app.previewSuccess) },
+    icon('check')
+  );
 
   const deviceButton = (device, label) =>
     h('button', { type: 'button', class: 'icon-btn', 'aria-label': label, title: label, 'aria-pressed': String(app.device === device), dataset: { device }, onclick: () => setDevice(device) }, icon(device));
@@ -271,7 +299,9 @@ function showWorkspace() {
       'div',
       { class: 'preview-toolbar' },
       h('span', { class: 'preview-label' }, icon('eye'), 'Preview'),
+      ui.hiddenBadge,
       pageSelect,
+      ui.successToggle,
       h('div', { class: 'device-toggle' }, ui.devices),
       h('a', { class: 'icon-btn', href: app.siteUrl + '/', target: '_blank', rel: 'noopener noreferrer', title: 'Open live site', 'aria-label': 'Open live site' }, icon('external')),
       h('button', { type: 'button', class: 'btn btn-ghost btn-sm preview-close', onclick: () => togglePreview(false) }, 'Back to editing')
@@ -299,6 +329,7 @@ function showWorkspace() {
   root.replaceChildren(ui.shell);
 
   new ResizeObserver(fitPreview).observe(ui.stage);
+  app.previewPage = PANELS.find((p) => p.id === app.panel)?.page ?? 'home';
   renderNav();
   renderPanel();
   updateStatus();
@@ -385,13 +416,30 @@ let pendingAnchor = '';
 const FONT_BASE = new URL('/assets/fonts/', location.href).href;
 const absolute = (src) => (src.startsWith('/') ? new URL(src, location.href).href : src);
 
+let lastPostIndex = 0;
+
+/** Keep the page picker in sync with the settings (post titles change, posts come and go). */
+function syncPageSelect(settings) {
+  const pages = previewPages(settings);
+  if (!pages.some((p) => p.id === app.previewPage)) {
+    // The previewed post was renamed or removed: show the post now at the same position, or the news page.
+    const posts = sortedPosts(settings);
+    const post = app.previewPage.startsWith('post:') ? posts[Math.min(lastPostIndex, posts.length - 1)] : null;
+    app.previewPage = post ? `post:${post.slug}` : app.previewPage.startsWith('post:') ? 'news' : 'home';
+  }
+  if (app.previewPage.startsWith('post:')) lastPostIndex = Math.max(0, sortedPosts(settings).findIndex((p) => `post:${p.slug}` === app.previewPage));
+  ui.pageSelect.replaceChildren(...pages.map((p) => h('option', { value: p.id, selected: p.id === app.previewPage }, p.hidden ? `${p.label} (hidden)` : p.label)));
+  ui.hiddenBadge.hidden = !pages.find((p) => p.id === app.previewPage)?.hidden;
+}
+
 function renderPreview() {
   if (!ui.frames) return;
   const settings = app.normalized();
+  syncPageSelect(settings);
   const heroImage = settings.theme.heroImage ? absolute(app.imageSrc(settings.theme.heroImage)) : '';
   const css = themeCss(settings.theme, { imageUrl: heroImage, fontBase: FONT_BASE });
   const nextThemeUrl = URL.createObjectURL(new Blob([css], { type: 'text/css' }));
-  const html = renderPage(settings, app.previewPage, { preview: true, themeHref: nextThemeUrl, resolveImage: app.imageSrc });
+  const html = renderPage(settings, app.previewPage, { preview: true, previewSuccess: app.previewSuccess, themeHref: nextThemeUrl, resolveImage: app.imageSrc });
 
   const current = ui.frames[activeFrame];
   const next = ui.frames[1 - activeFrame];
@@ -412,8 +460,6 @@ function renderPreview() {
   next.srcdoc = html;
 }
 
-const PAGE_PATHS = { '/': 'home', '/index.html': 'home', '/privacy/': 'privacy', '/confirmed/': 'confirmed', '/legal/': 'legal', '/404.html': 'notfound' };
-
 function wirePreview(doc) {
   doc.addEventListener('submit', (event) => event.preventDefault());
   doc.addEventListener('click', (event) => {
@@ -426,19 +472,19 @@ function wirePreview(doc) {
       return;
     }
     const url = new URL(href, location.origin);
-    const page = url.origin === location.origin ? PAGE_PATHS[url.pathname] : null;
+    const page = url.origin === location.origin ? pageIdForPath(app.normalized(), url.pathname) : null;
     if (page) setPreviewPage(page, url.hash.slice(1));
-    else window.open(url.href, '_blank', 'noopener,noreferrer');
+    else if (href !== '#') window.open(url.href, '_blank', 'noopener,noreferrer');
   });
 }
 
 function setPreviewPage(page, anchor = '') {
+  if (!ui.frames) return;
   if (page === app.previewPage) {
     if (anchor) ui.frames[activeFrame].contentDocument?.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth' });
     return;
   }
   app.previewPage = page;
-  ui.pageSelect.value = page;
   pendingAnchor = anchor;
   ui.frames[activeFrame].contentWindow?.scrollTo(0, 0);
   renderPreview();
@@ -481,7 +527,7 @@ function blobToBase64(blob) {
  * Re-encodes the image in the browser: resizes it and strips metadata such as GPS location.
  * SVG is not accepted, because an SVG file can contain scripts.
  */
-async function processUpload(file, { maxWidth = 1600, maxHeight = 1600, format = 'image/webp', name = 'image' } = {}) {
+async function processUpload(file, { maxWidth = 1600, maxHeight = 1600, format = 'image/webp', quality = 0.86, name = 'image' } = {}) {
   if (!UPLOAD_TYPES.includes(file.type)) throw new Error('Use a PNG, JPEG, WebP or GIF image.');
   if (file.size > 15 * 1024 * 1024) throw new Error('That image is larger than 15 MB.');
 
@@ -496,7 +542,7 @@ async function processUpload(file, { maxWidth = 1600, maxHeight = 1600, format =
     context.imageSmoothingQuality = 'high';
     context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     bitmap.close();
-    blob = await new Promise((resolve) => canvas.toBlob(resolve, format, 0.86));
+    blob = await new Promise((resolve) => canvas.toBlob(resolve, format, quality));
     if (!blob) throw new Error('This browser could not process the image.');
   }
 
@@ -511,14 +557,13 @@ async function processUpload(file, { maxWidth = 1600, maxHeight = 1600, format =
 
 const AREA_NAMES = {
   site: 'site details',
-  hero: 'hero',
+  nav: 'menu',
+  home: 'home page',
   newsletter: 'newsletter',
+  wishlist: 'Steam wishlist',
   theme: 'appearance',
-  sections: 'sections',
-  games: 'games',
-  devlog: 'devlog',
-  about: 'about',
-  cta: 'call-to-action',
+  news: 'news',
+  press: 'press kit',
   socials: 'social links',
   privacy: 'privacy policy',
   legal: 'legal notice',
@@ -640,12 +685,11 @@ async function refreshDeployStatus() {
 function applyPreset(id) {
   const preset = PRESETS[id];
   const theme = app.settings.theme;
+  const keepImage = theme.heroBackground === 'image';
   theme.preset = id;
   theme.colors = { ...preset.colors };
-  theme.headingFont = preset.headingFont;
-  theme.bodyFont = preset.bodyFont;
-  theme.cardStyle = preset.cardStyle;
-  if (theme.heroBackground !== 'image') theme.heroBackground = preset.heroBackground;
+  for (const key of PRESET_KEYS) theme[key] = preset[key];
+  if (keepImage) theme.heroBackground = 'image'; // an uploaded background beats the preset's pattern
   changed();
   renderPanel();
 }
@@ -694,7 +738,7 @@ async function importJson(file) {
 async function resetDefaults() {
   const choice = await confirmDialog({
     title: 'Reset everything to the defaults?',
-    body: 'All texts, games, colours and settings in the editor go back to the starting template. Nothing goes live until you publish, and older versions stay in History.',
+    body: 'All texts, news posts, press kit content, colours and settings in the editor go back to the starting template. Nothing goes live until you publish, and older versions stay in History.',
     confirm: 'Reset',
     danger: true,
   });

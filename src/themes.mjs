@@ -4,6 +4,13 @@
 import { isHexColor, safeAssetPath } from './util.mjs';
 
 export const FONTS = {
+  jost: {
+    label: 'Jost (geometric, Futura-style)',
+    family: 'Jost Variable',
+    fallback: 'Futura, "Trebuchet MS", system-ui, sans-serif',
+    faces: [{ weight: '100 900', latin: 'jost-latin-wght-normal.woff2', ext: 'jost-latin-ext-wght-normal.woff2' }],
+    heading: { weight: 700, tracking: '0.01em', scale: 1 },
+  },
   cinzel: {
     label: 'Cinzel (classic fantasy)',
     family: 'Cinzel Variable',
@@ -90,67 +97,102 @@ export const COLOR_KEYS = [
   ['accent2', 'Second accent (glows, links)'],
 ];
 
+// Each preset sets the colours plus these theme keys.
+export const PRESET_KEYS = ['headingFont', 'bodyFont', 'headingCase', 'buttonStyle', 'heroBackground', 'cardStyle', 'radius'];
+
 export const PRESETS = {
+  twilight: {
+    label: 'Twilight',
+    colors: { bg: '#0d1524', surface: '#142036', border: '#2b3a57', text: '#f3f5fa', muted: '#aeb8cc', accent: '#f2b35b', onAccent: '#1d1405', accent2: '#93b4ff' },
+    headingFont: 'jost',
+    bodyFont: 'jost',
+    headingCase: 'uppercase',
+    buttonStyle: 'solid',
+    heroBackground: 'mist',
+    cardStyle: 'outline',
+    radius: 4,
+  },
   arcane: {
     label: 'Arcane night',
     colors: { bg: '#0b0d19', surface: '#141932', border: '#2a3157', text: '#ecebf7', muted: '#a8abc9', accent: '#f2b35b', onAccent: '#1d1405', accent2: '#9d8cff' },
     headingFont: 'cinzel',
     bodyFont: 'inter',
+    headingCase: 'normal',
+    buttonStyle: 'solid',
     heroBackground: 'starfield',
     cardStyle: 'glass',
+    radius: 14,
   },
   ember: {
     label: 'Ember forge',
     colors: { bg: '#130e0c', surface: '#1f1714', border: '#3a2a22', text: '#f6ede6', muted: '#c2aea0', accent: '#ff7d45', onAccent: '#210b02', accent2: '#ffcb5c' },
     headingFont: 'fraunces',
     bodyFont: 'inter',
+    headingCase: 'normal',
+    buttonStyle: 'solid',
     heroBackground: 'aurora',
     cardStyle: 'glass',
+    radius: 12,
   },
   grove: {
     label: 'Moonlit grove',
     colors: { bg: '#0a1511', surface: '#11221b', border: '#214034', text: '#e8f3ec', muted: '#a1bfad', accent: '#7fe3a5', onAccent: '#052013', accent2: '#e2cf72' },
     headingFont: 'fraunces',
     bodyFont: 'nunito',
+    headingCase: 'normal',
+    buttonStyle: 'solid',
     heroBackground: 'aurora',
     cardStyle: 'glass',
+    radius: 16,
   },
   pixel: {
     label: 'Neon arcade',
     colors: { bg: '#0d0a16', surface: '#19142a', border: '#3a2f5c', text: '#f3f0ff', muted: '#b1a9d3', accent: '#3dff8f', onAccent: '#03160a', accent2: '#ff5ad9' },
     headingFont: 'pixelify-sans',
     bodyFont: 'atkinson',
+    headingCase: 'uppercase',
+    buttonStyle: 'outline',
     heroBackground: 'grid',
     cardStyle: 'outline',
+    radius: 0,
   },
   parchment: {
     label: 'Parchment (light)',
     colors: { bg: '#f6f0e4', surface: '#fffaf1', border: '#e0d3bc', text: '#2a2017', muted: '#6b5b4b', accent: '#a3302b', onAccent: '#fff8f0', accent2: '#2f6f73' },
     headingFont: 'cinzel',
     bodyFont: 'atkinson',
+    headingCase: 'normal',
+    buttonStyle: 'solid',
     heroBackground: 'aurora',
     cardStyle: 'solid',
+    radius: 10,
   },
   frost: {
     label: 'Frost (light)',
     colors: { bg: '#f3f6fb', surface: '#ffffff', border: '#d9e0ec', text: '#111827', muted: '#556079', accent: '#3550f0', onAccent: '#ffffff', accent2: '#0f9f92' },
     headingFont: 'space-grotesk',
     bodyFont: 'inter',
+    headingCase: 'normal',
+    buttonStyle: 'solid',
     heroBackground: 'grid',
     cardStyle: 'solid',
+    radius: 12,
   },
 };
 
 export const HERO_BACKGROUNDS = {
+  mist: 'Mist (soft blurred light)',
   starfield: 'Starfield',
   aurora: 'Aurora glow',
   grid: 'Retro grid',
   solid: 'Plain colour',
-  image: 'Image (upload)',
+  image: 'Image (upload key art)',
 };
 
-export const CARD_STYLES = { glass: 'Frosted glass', solid: 'Solid', outline: 'Outline only' };
-export const HERO_LAYOUTS = { split: 'Text left, sign-up right', centered: 'Centred, sign-up below' };
+export const CARD_STYLES = { outline: 'Outline only', glass: 'Frosted glass', solid: 'Solid' };
+export const HEADING_CASES = { uppercase: 'UPPERCASE', normal: 'As typed' };
+export const BUTTON_STYLES = { solid: 'Solid (most visible)', outline: 'Outline' };
+export const FORM_LAYOUTS = { stacked: 'Button under the field', inline: 'Button next to the field' };
 
 // --- colour maths -------------------------------------------------------
 
@@ -181,6 +223,7 @@ export function contrastReport(colors) {
     { label: 'Text on cards', a: colors.text, b: colors.surface, min: 4.5 },
     { label: 'Secondary text on background', a: colors.muted, b: colors.bg, min: 4.5 },
     { label: 'Button text on accent', a: colors.onAccent, b: colors.accent, min: 4.5 },
+    { label: 'Accent on background (outline buttons)', a: colors.accent, b: colors.bg, min: 3 },
     { label: 'Links on background', a: colors.accent2, b: colors.bg, min: 3 },
   ];
   return checks.map((c) => {
@@ -249,9 +292,11 @@ ${faces.join('\n')}
   --heading-weight: ${heading.heading.weight};
   --heading-tracking: ${heading.heading.tracking};
   --heading-scale: ${heading.heading.scale};
+  --heading-case: ${theme.headingCase === 'uppercase' ? 'uppercase' : 'none'};
   --base-size: ${theme.baseSize}px;
   --radius: ${theme.radius}px;
   --hero-overlay: ${(theme.heroOverlay / 100).toFixed(2)};
+  --hero-blur: ${theme.heroBlur}px;
   --hero-image: ${heroImage ? `url('${heroImage}')` : 'none'};
 }
 `;

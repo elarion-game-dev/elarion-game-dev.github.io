@@ -7,7 +7,7 @@ export const ICONS = {
   brand: '<path d="M12 2.5c.5 4.3 2.3 7.7 9 9-6.7 1.3-8.5 4.7-9 9-.5-4.3-2.3-7.7-9-9 6.7-1.3 8.5-4.7 9-9z"/>',
   appearance: '<circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.2"/><circle cx="12" cy="7.5" r="1.2"/><circle cx="15.5" cy="10" r="1.2"/><path d="M12 21a3 3 0 0 1 0-6h1.5a2.5 2.5 0 0 0 0-5"/>',
   sections: '<rect x="3" y="4" width="18" height="5" rx="1.5"/><rect x="3" y="11" width="18" height="9" rx="1.5"/>',
-  games: '<rect x="2.5" y="7" width="19" height="11" rx="4"/><path d="M7 11v3M5.5 12.5h3"/><circle cx="16" cy="11.5" r="1"/><circle cx="18" cy="13.5" r="1"/>',
+  press: '<path d="M4 5h13v14H6a2 2 0 0 1-2-2z"/><path d="M17 9h3v8a2 2 0 0 1-2 2"/><path d="M8 9h5M8 13h5M8 17h3"/>',
   devlog: '<path d="M5 4h11l3 3v13H5z"/><path d="M9 10h6M9 14h6M9 18h4"/>',
   about: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
   socials: '<circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="m8.2 10.8 7.6-3.6M8.2 13.2l7.6 3.6"/>',
@@ -120,7 +120,7 @@ function wrap(label, control, { help, id, inline = false } = {}) {
 
 // --- bound controls: each reads/writes one settings path via the app ------------------
 
-export function text(app, path, { label, help, placeholder, maxlength, type = 'text', multiline = false, rows = 3, validate, counter, rerender, mono } = {}) {
+export function text(app, path, { label, help, placeholder, maxlength, type = 'text', multiline = false, rows = 3, validate, counter, rerender, mono, onInput } = {}) {
   const id = nextId();
   const value = app.get(path) ?? '';
   const attrs = { id, placeholder, maxlength, class: `input${mono ? ' mono' : ''}`, 'aria-describedby': help ? `${id}-help` : null, spellcheck: type === 'text' && !mono ? 'true' : 'false' };
@@ -135,8 +135,11 @@ export function text(app, path, { label, help, placeholder, maxlength, type = 't
     }
     if (validate) el.showError(input.value ? validate(input.value.trim()) : '');
   };
+  let previous = input.value;
   input.addEventListener('input', () => {
     app.set(path, type === 'number' ? Number(input.value) : input.value);
+    onInput?.(input.value, previous);
+    previous = input.value;
     check();
   });
   input.addEventListener('change', () => {
@@ -215,21 +218,24 @@ export function color(app, path, { label, onChange } = {}) {
   return h('div', { class: 'field field-color' }, h('label', { class: 'field-label', for: id }, label), h('div', { class: 'color-row' }, picker, hex));
 }
 
-/** Comma-separated list of short strings (tags). */
-export function tags(app, path, { label, help, max = 6 } = {}) {
-  const id = nextId();
-  const input = h('input', { type: 'text', id, class: 'input', value: (app.get(path) ?? []).join(', '), placeholder: 'Browser, Physics' });
-  input.addEventListener('input', () =>
-    app.set(
-      path,
-      input.value
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean)
-        .slice(0, max)
-    )
-  );
-  return wrap(label, input, { help: help ?? `Comma-separated, up to ${max}.`, id });
+/** Ordered sections with an on/off switch, up/down buttons and an editable heading: [{ id, enabled, heading }]. */
+export function sectionList(app, path, { labels, help } = {}) {
+  const sections = app.get(path) ?? [];
+  const rows = sections.map((section, i) => {
+    const toggleId = nextId('section');
+    const input = h('input', { type: 'checkbox', class: 'switch-input', role: 'switch', checked: section.enabled, id: toggleId, 'aria-label': `Show ${labels[section.id]}` });
+    input.addEventListener('change', () => app.set(`${path}.${i}.enabled`, input.checked));
+    const heading = h('input', { type: 'text', class: 'input input-sm', value: section.heading ?? '', maxlength: 80, 'aria-label': `${labels[section.id]} heading` });
+    heading.addEventListener('input', () => app.set(`${path}.${i}.heading`, heading.value));
+    return h(
+      'li',
+      { class: 'section-row' },
+      h('label', { class: 'switch', for: toggleId }, input, h('span', { class: 'switch-track', 'aria-hidden': 'true' })),
+      h('div', { class: 'section-main' }, h('span', { class: 'section-name' }, labels[section.id]), heading),
+      rowButtons(app, path, i, sections.length, { removable: false })
+    );
+  });
+  return h('div', { class: 'field' }, h('ul', { class: 'section-list' }, rows), help ? h('p', { class: 'field-help' }, help) : null);
 }
 
 /** Editable list of strings with add / remove / reorder. */
@@ -247,7 +253,7 @@ export function stringList(app, path, { label, help, max = 6, placeholder } = {}
   return h('div', { class: 'field' }, h('span', { class: 'field-label' }, label), h('div', { class: 'list' }, rows), add, help ? h('p', { class: 'field-help' }, help) : null);
 }
 
-function rowButtons(app, path, index, length) {
+function rowButtons(app, path, index, length, { removable = true } = {}) {
   const move = (delta) => {
     const list = [...app.get(path)];
     const [item] = list.splice(index, 1);
@@ -266,12 +272,12 @@ function rowButtons(app, path, index, length) {
     { class: 'row-buttons' },
     h('button', { type: 'button', class: 'icon-btn', title: 'Move up', 'aria-label': 'Move up', disabled: index === 0, onclick: () => move(-1) }, icon('up')),
     h('button', { type: 'button', class: 'icon-btn', title: 'Move down', 'aria-label': 'Move down', disabled: index === length - 1, onclick: () => move(1) }, icon('down')),
-    h('button', { type: 'button', class: 'icon-btn danger', title: 'Remove', 'aria-label': 'Remove', onclick: remove }, icon('trash'))
+    removable ? h('button', { type: 'button', class: 'icon-btn danger', title: 'Remove', 'aria-label': 'Remove', onclick: remove }, icon('trash')) : null
   );
 }
 
-/** List of objects, each edited with its own set of fields. */
-export function repeater(app, path, { title, itemTitle, fields, newItem, max = 24, addLabel = 'Add' } = {}) {
+/** List of objects, each edited with its own set of fields. onOpen(index) runs when an item is expanded. */
+export function repeater(app, path, { title, itemTitle, fields, newItem, max = 24, addLabel = 'Add', empty, onOpen } = {}) {
   const items = app.get(path) ?? [];
   const blocks = items.map((item, i) =>
     h(
@@ -281,7 +287,12 @@ export function repeater(app, path, { title, itemTitle, fields, newItem, max = 2
       h('div', { class: 'repeat-body' }, fields(`${path}.${i}`, item))
     )
   );
-  for (const [i, block] of blocks.entries()) block.addEventListener('toggle', () => app.setOpen(`${path}.${i}`, block.open));
+  for (const [i, block] of blocks.entries()) {
+    block.addEventListener('toggle', () => {
+      app.setOpen(`${path}.${i}`, block.open);
+      if (block.open) onOpen?.(i);
+    });
+  }
   const add =
     items.length < max
       ? h(
@@ -290,20 +301,31 @@ export function repeater(app, path, { title, itemTitle, fields, newItem, max = 2
             type: 'button',
             class: 'btn btn-ghost btn-sm',
             onclick: () => {
-              app.set(path, [...items, newItem()]);
+              app.set(path, [...items, newItem(items)]);
               app.setOpen(`${path}.${items.length}`, true);
               app.rerender();
+              onOpen?.(items.length);
             },
           },
           icon('plus'),
           addLabel
         )
       : h('p', { class: 'field-help' }, `Maximum of ${max} reached.`);
-  return h('div', { class: 'repeater' }, title ? h('span', { class: 'field-label' }, title) : null, blocks, add);
+  return h(
+    'div',
+    { class: 'repeater' },
+    title ? h('span', { class: 'field-label' }, title) : null,
+    !items.length && empty ? h('p', { class: 'field-help' }, empty) : null,
+    blocks,
+    add
+  );
 }
 
-/** Image field: upload (re-encoded in the browser, metadata stripped) and optionally an https URL. */
-export function image(app, path, { label, help, allowUrl = false, upload = {} } = {}) {
+/**
+ * Image field. Images are always uploaded to the site (re-encoded in the browser, metadata stripped),
+ * so pages never load images from other servers.
+ */
+export function image(app, path, { label, help, upload = {} } = {}) {
   const id = nextId();
   const value = app.get(path) ?? '';
   const preview = h('div', { class: 'image-preview' });
@@ -313,7 +335,6 @@ export function image(app, path, { label, help, allowUrl = false, upload = {} } 
   showPreview(value);
 
   const file = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp,image/gif', class: 'visually-hidden', id: `${id}-file` });
-  const urlInput = allowUrl ? h('input', { type: 'url', id, class: 'input', value, placeholder: 'https://… or upload', spellcheck: 'false' }) : null;
   const status = h('span', { class: 'image-status' });
 
   file.addEventListener('change', async () => {
@@ -324,16 +345,11 @@ export function image(app, path, { label, help, allowUrl = false, upload = {} } 
     try {
       const sitePath = await app.upload(chosen, { ...upload, name: upload.name ?? label });
       app.set(path, sitePath);
-      if (urlInput) urlInput.value = sitePath;
       showPreview(sitePath);
       status.textContent = 'Ready (uploads when you publish)';
     } catch (error) {
       status.textContent = error.message;
     }
-  });
-  urlInput?.addEventListener('input', () => {
-    app.set(path, urlInput.value.trim());
-    showPreview(urlInput.value.trim());
   });
 
   const remove = h(
@@ -343,7 +359,6 @@ export function image(app, path, { label, help, allowUrl = false, upload = {} } 
       class: 'btn btn-ghost btn-sm',
       onclick: () => {
         app.set(path, '');
-        if (urlInput) urlInput.value = '';
         showPreview('');
         status.textContent = '';
       },
@@ -362,8 +377,7 @@ export function image(app, path, { label, help, allowUrl = false, upload = {} } 
       h(
         'div',
         { class: 'image-controls' },
-        urlInput,
-        h('div', { class: 'image-buttons' }, h('label', { class: 'btn btn-ghost btn-sm', for: `${id}-file` }, icon('upload'), 'Upload'), remove, file),
+        h('div', { class: 'image-buttons' }, h('label', { class: 'btn btn-ghost btn-sm', for: `${id}-file` }, icon('upload'), value ? 'Replace' : 'Upload'), remove, file),
         status
       )
     ),

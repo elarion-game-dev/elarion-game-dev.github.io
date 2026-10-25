@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "site": {
     "name": "Elarion",
     "url": "https://elarion-game-dev.github.io",
@@ -7,10 +7,34 @@
     "contactEmail": "",
     "copyrightName": "Elarion"
   },
-  "hero": {
-    "eyebrow": "Indie game developer",
-    "headline": "Physics, chaos and a little bit of magic.",
-    "intro": "I'm Elarion, and I make browser games where things explode, shatter and pile up. Join the newsletter to follow each new game from its first prototype to launch."
+  "nav": {
+    "home": {
+      "enabled": true,
+      "label": "Home"
+    },
+    "news": {
+      "enabled": true,
+      "label": "News"
+    },
+    "press": {
+      "enabled": true,
+      "label": "Press Kit"
+    }
+  },
+  "home": {
+    "layout": "about-first",
+    "showLogo": true,
+    "logoImage": "",
+    "logoImageAlt": "",
+    "about": {
+      "enabled": true,
+      "heading": "About Elarion",
+      "body": "Elarion is an indie game developer building a new game in the open. Follow along from the first sketches to launch day, and help shape the game in early playtests."
+    },
+    "socials": {
+      "enabled": true,
+      "heading": "Follow Elarion"
+    }
   },
   "newsletter": {
     "provider": "none",
@@ -31,131 +55,179 @@
       "providerName": "",
       "privacyUrl": ""
     },
-    "heading": "Follow the journey",
-    "body": "Get an email when there's something worth showing: new prototypes, behind-the-scenes notes and early playtest invites.",
+    "heading": "Get early playtest access and exclusive development updates",
+    "body": "",
+    "showPerks": true,
     "perks": [
-      "Early access to playtests",
-      "Behind-the-scenes devlogs",
-      "Launch news before anyone else"
+      "Exclusive screenshots",
+      "Early builds",
+      "Concept art",
+      "Developer insights"
     ],
-    "emailLabel": "Email address",
+    "emailLabel": "Email",
     "placeholder": "you@example.com",
     "buttonLabel": "Subscribe",
-    "requireConsent": true,
-    "consentText": "I'd like to receive the Elarion newsletter and I've read the {privacy}. I can unsubscribe at any time.",
-    "finePrint": "No spam, ever. You'll confirm your address first, and every email has a one-click unsubscribe link.",
+    "trustText": "About one email a month. No spam, and you can unsubscribe with one click at any time.",
+    "requireConsent": false,
+    "consentText": "By subscribing you agree to receive the Elarion newsletter. See the {privacy}.",
     "successTitle": "Almost there! Check your inbox.",
     "successBody": "I've sent you a confirmation link. Click it to finish subscribing. Nothing there after a few minutes? Check your spam folder.",
-    "closedMessage": "The newsletter opens very soon. Check back in a day or two!",
+    "closedMessage": "Sign-ups open very soon. Check back in a day or two!",
     "confirmedTitle": "You're in. Welcome aboard!",
-    "confirmedBody": "Thanks for confirming your email. The next devlog will land straight in your inbox. Until then, why not play one of the prototypes?"
+    "confirmedBody": "Thanks for confirming your email. Playtest invites, screenshots and development updates will land straight in your inbox.",
+    "showOnNews": true
+  },
+  "wishlist": {
+    "enabled": true,
+    "url": "",
+    "text": "Wishlisting the game on Steam is the best way to support it.",
+    "buttonLabel": "Wishlist on Steam"
   },
   "theme": {
-    "preset": "arcane",
+    "preset": "twilight",
     "colors": {
-      "bg": "#0b0d19",
-      "surface": "#141932",
-      "border": "#2a3157",
-      "text": "#ecebf7",
-      "muted": "#a8abc9",
+      "bg": "#0d1524",
+      "surface": "#142036",
+      "border": "#2b3a57",
+      "text": "#f3f5fa",
+      "muted": "#aeb8cc",
       "accent": "#f2b35b",
       "onAccent": "#1d1405",
-      "accent2": "#9d8cff"
+      "accent2": "#93b4ff"
     },
-    "headingFont": "cinzel",
-    "bodyFont": "inter",
-    "baseSize": 17,
-    "radius": 14,
-    "heroLayout": "split",
-    "heroBackground": "starfield",
+    "headingFont": "jost",
+    "bodyFont": "jost",
+    "headingCase": "uppercase",
+    "buttonStyle": "solid",
+    "formLayout": "stacked",
+    "baseSize": 18,
+    "radius": 4,
+    "heroBackground": "mist",
     "heroImage": "",
-    "heroOverlay": 65,
-    "cardStyle": "glass",
+    "heroBlur": 14,
+    "heroOverlay": 70,
+    "cardStyle": "outline",
     "animations": true,
     "logo": "",
     "favicon": ""
   },
-  "sections": [
-    {
-      "id": "games",
-      "enabled": true
-    },
-    {
-      "id": "devlog",
-      "enabled": false
-    },
-    {
-      "id": "about",
-      "enabled": true
-    },
-    {
-      "id": "cta",
-      "enabled": true
-    }
-  ],
-  "games": {
-    "heading": "Games",
-    "intro": "Prototypes you can play right now, straight in your browser.",
-    "items": [
+  "news": {
+    "heading": "News",
+    "intro": "Development updates, new builds and behind-the-scenes notes.",
+    "readMoreLabel": "Read more",
+    "posts": [
       {
-        "title": "Mage vs. Horde",
-        "description": "Cast huge spells from a tower into an endless horde of orcs. A physics prototype.",
-        "url": "https://elarion-game-dev.github.io/mage-vs-horde/",
-        "image": "https://elarion-game-dev.github.io/mage-vs-horde/preview.jpg",
-        "imageAlt": "A meteor lands in a horde of orcs, seen from the top of a stone tower.",
-        "status": "Playable prototype",
-        "tags": [
-          "Browser",
-          "Physics"
-        ],
-        "linkLabel": "Play in browser"
+        "title": "Welcome to Elarion",
+        "slug": "welcome",
+        "date": "2026-10-25",
+        "image": "",
+        "imageAlt": "",
+        "summary": "The site is live. This is where development news will land.",
+        "body": "This is where I'll post development news: new builds, screenshots, concept art and the occasional deep-dive into how things work.\n\nWant it all first? Join the newsletter. Subscribers get early playtest access.",
+        "url": "",
+        "linkLabel": ""
+      }
+    ]
+  },
+  "press": {
+    "heading": "Press kit",
+    "intro": "Everything you need to write about Elarion. All images and logos may be used in coverage.",
+    "sections": [
+      {
+        "id": "factsheet",
+        "enabled": true,
+        "heading": "Factsheet"
       },
       {
-        "title": "Bottle Roll Incremental",
-        "description": "Roll glass bottles down the stairs, film the smash and grow your channel.",
-        "url": "https://elarion-game-dev.github.io/bottle-roll-incremental/",
-        "image": "https://elarion-game-dev.github.io/bottle-roll-incremental/preview.jpg",
-        "imageAlt": "A glass bottle shattering on a flight of stairs.",
-        "status": "Playable",
-        "tags": [
-          "Browser",
-          "Incremental"
-        ],
-        "linkLabel": "Play in browser"
-      }
-    ]
-  },
-  "devlog": {
-    "heading": "Devlog",
-    "intro": "Notes from the workbench.",
-    "items": [
+        "id": "description",
+        "enabled": true,
+        "heading": "Description"
+      },
       {
-        "date": "2026-10-25",
-        "title": "The Elarion site is live",
-        "body": "A home for my games, and a newsletter for everyone who wants to follow along.",
-        "url": ""
+        "id": "history",
+        "enabled": true,
+        "heading": "History"
+      },
+      {
+        "id": "features",
+        "enabled": true,
+        "heading": "Features"
+      },
+      {
+        "id": "images",
+        "enabled": true,
+        "heading": "Screenshots"
+      },
+      {
+        "id": "logos",
+        "enabled": true,
+        "heading": "Logo & icon"
+      },
+      {
+        "id": "videos",
+        "enabled": true,
+        "heading": "Videos"
+      },
+      {
+        "id": "quotes",
+        "enabled": true,
+        "heading": "Press & quotes"
+      },
+      {
+        "id": "team",
+        "enabled": true,
+        "heading": "Team"
+      },
+      {
+        "id": "contact",
+        "enabled": true,
+        "heading": "Contact"
       }
-    ]
+    ],
+    "facts": [
+      {
+        "label": "Developer",
+        "value": "Elarion",
+        "url": ""
+      },
+      {
+        "label": "Status",
+        "value": "First game in development",
+        "url": ""
+      },
+      {
+        "label": "Website",
+        "value": "elarion-game-dev.github.io",
+        "url": "https://elarion-game-dev.github.io/"
+      }
+    ],
+    "description": "Elarion is an independent game developer. The first game is in development and will be announced soon.\n\nJoin the newsletter for early playtest access and exclusive development updates.",
+    "history": "",
+    "features": [],
+    "images": [],
+    "logos": [
+      {
+        "src": "/assets/press/elarion-logo-light.png",
+        "label": "Logo, light (for dark backgrounds)",
+        "background": "dark"
+      },
+      {
+        "src": "/assets/press/elarion-logo-dark.png",
+        "label": "Logo, dark (for light backgrounds)",
+        "background": "light"
+      },
+      {
+        "src": "/assets/press/elarion-mark.png",
+        "label": "Icon",
+        "background": "dark"
+      }
+    ],
+    "videos": [],
+    "quotes": [],
+    "team": [],
+    "contact": "For press enquiries, review copies and interviews, get in touch."
   },
-  "about": {
-    "heading": "About Elarion",
-    "navLabel": "About",
-    "body": "Elarion is the name I make games under. I build for the browser, prototype fast and share the process along the way, including the parts that don't work.\n\nRight now I'm exploring physics-heavy ideas: hordes, destruction and satisfying chaos. Subscribe and you'll see each new prototype first.",
-    "image": "",
-    "imageAlt": ""
-  },
-  "cta": {
-    "heading": "Don't miss the next game",
-    "body": "One email when there's something new to play. No spam, unsubscribe any time.",
-    "buttonLabel": "Join the newsletter"
-  },
-  "socials": [
-    {
-      "platform": "github",
-      "url": "https://github.com/elarion-game-dev",
-      "label": ""
-    }
-  ],
+  "socials": [],
   "privacy": {
     "controllerName": "",
     "controllerAddress": "",
@@ -172,9 +244,9 @@
   },
   "seo": {
     "title": "Elarion · Indie game developer",
-    "description": "Elarion makes physics-driven browser games. Play the prototypes and join the newsletter to follow the journey.",
+    "description": "Elarion is an indie game developer. Join the newsletter for early playtest access and exclusive development updates.",
     "ogImage": "/assets/img/og.png",
-    "ogImageAlt": "Elarion: indie game developer",
+    "ogImageAlt": "Elarion: get early playtest access and exclusive development updates",
     "indexable": true
   }
 }

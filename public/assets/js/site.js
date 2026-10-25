@@ -55,8 +55,7 @@ async function interpret(provider, response) {
 }
 
 function enhance(form) {
-  const card = form.closest('.subscribe-card');
-  const success = card?.querySelector('[data-success]');
+  const success = form.closest('[data-signup]')?.querySelector('[data-success]');
   const email = form.querySelector('input[type="email"]');
   const consent = form.querySelector('[data-consent]');
   const honeypot = form.querySelector('[data-honeypot]');

@@ -2,8 +2,9 @@
 // admin's live preview (browser), so what you see in the preview is exactly what gets published.
 
 import { BRAND_ICONS } from './icons.mjs';
-import { inline, markdown } from './markdown.mjs';
+import { markdown } from './markdown.mjs';
 import { resolveProvider } from './providers.mjs';
+import { NAV_IDS } from './settings.mjs';
 import { preloadFont, themeCss } from './themes.mjs';
 import { esc, formatDate } from './util.mjs';
 
@@ -17,6 +18,9 @@ const STROKE = {
   check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
   hourglass: '<path d="M6 3h12M6 21h12M7.5 3c0 4.5 4.5 5.5 4.5 9s-4.5 4.5-4.5 9M16.5 3c0 4.5-4.5 5.5-4.5 9s4.5 4.5 4.5 9"/>',
   arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  back: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
+  download: '<path d="M12 4v12M7 11l5 5 5-5M5 20h14"/>',
+  play: '<path d="M7 4.5v15l12.5-7.5z"/>',
   website: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/>',
   email: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
   rss: '<path d="M5 4.5a14.5 14.5 0 0 1 14.5 14.5M5 11a8 8 0 0 1 8 8"/><circle cx="6" cy="18" r="1.25"/>',
@@ -26,7 +30,7 @@ const icon = (name, cls = 'icon') =>
   `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${STROKE[name]}</svg>`;
 const sigil = (cls = 'sigil') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="${SIGIL_PATH}"/></svg>`;
 
-function socialIcon(platform) {
+function brandIcon(platform) {
   const brand = BRAND_ICONS[platform];
   if (brand) return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="${brand.path}"/></svg>`;
   return icon(STROKE[platform] ? platform : 'website');
@@ -36,47 +40,109 @@ export function faviconSvg(accent) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="${accent}" d="${SIGIL_PATH}"/></svg>\n`;
 }
 
-// --- shared building blocks -------------------------------------------------
+// --- pages -------------------------------------------------------------------
 
-const PAGES = {
-  home: { path: '/', file: 'index.html' },
+const STATIC_PAGES = {
+  home: { path: '/', file: 'index.html', nav: 'home' },
+  news: { path: '/news/', file: 'news/index.html', nav: 'news' },
+  press: { path: '/press/', file: 'press/index.html', nav: 'press' },
   privacy: { path: '/privacy/', file: 'privacy/index.html', title: 'Privacy policy' },
   confirmed: { path: '/confirmed/', file: 'confirmed/index.html', title: 'Subscription confirmed', noindex: true },
   legal: { path: '/legal/', file: 'legal/index.html' },
   notfound: { path: '/404.html', file: '404.html', title: 'Page not found', noindex: true },
 };
+const NAV_PATHS = { home: '/', news: '/news/', press: '/press/' };
 
-export const PREVIEW_PAGES = { home: 'Home', privacy: 'Privacy policy', confirmed: 'Confirmed', legal: 'Legal notice', notfound: '404' };
+/** Markdown-ish text as a plain one-line description. */
+function plain(text, max = 200) {
+  const out = String(text ?? '')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/[*_`#>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return out.length > max ? `${out.slice(0, max - 1).trimEnd()}…` : out;
+}
+
+export function sortedPosts(settings) {
+  return [...settings.news.posts].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+}
+
+/** Everything the layout needs to know about one page. Page ids: home, news, press, … and "post:<slug>". */
+export function pageInfo(settings, id) {
+  if (id.startsWith('post:')) {
+    const post = settings.news.posts.find((p) => p.slug === id.slice(5));
+    if (!post) return null;
+    return {
+      id,
+      kind: 'post',
+      post,
+      path: `/news/${post.slug}/`,
+      file: `news/${post.slug}/index.html`,
+      nav: 'news',
+      title: post.title || 'Untitled post',
+      description: plain(post.summary || post.body),
+      image: post.image,
+      ogType: 'article',
+    };
+  }
+  const base = STATIC_PAGES[id];
+  if (!base) return null;
+  const titles = { news: settings.news.heading, press: settings.press.heading, legal: settings.legal.heading };
+  const descriptions = { news: plain(settings.news.intro), press: plain(settings.press.intro) };
+  return { id, kind: id, ...base, title: base.title ?? titles[id], description: descriptions[id] };
+}
+
+/** Page ids that exist on the live site. */
+export function livePages(settings) {
+  return [
+    'home',
+    'privacy',
+    'confirmed',
+    'notfound',
+    ...(settings.nav.news.enabled ? ['news', ...settings.news.posts.map((p) => `post:${p.slug}`)] : []),
+    ...(settings.nav.press.enabled ? ['press'] : []),
+    ...(settings.legal.enabled ? ['legal'] : []),
+  ];
+}
+
+/** Every page the admin can preview, including ones that are switched off on the live site. */
+export function previewPages(settings) {
+  const live = new Set(livePages(settings));
+  const pages = [
+    ['home', 'Home'],
+    ['news', 'News'],
+    ...sortedPosts(settings).map((p) => [`post:${p.slug}`, `News: ${p.title || 'Untitled'}`]),
+    ['press', 'Press kit'],
+    ['confirmed', 'After confirming email'],
+    ['privacy', 'Privacy policy'],
+    ['legal', 'Legal notice'],
+    ['notfound', '404'],
+  ];
+  return pages.map(([id, label]) => ({ id, label, hidden: !live.has(id) }));
+}
+
+/** Page id for a site path such as "/news/welcome/", or null. */
+export function pageIdForPath(settings, pathname) {
+  const match = pathname.match(/^\/news\/([a-z0-9-]+)\/?$/);
+  if (match) return settings.news.posts.some((p) => p.slug === match[1]) ? `post:${match[1]}` : null;
+  const found = Object.entries(STATIC_PAGES).find(([, page]) => page.path === pathname || (page.path !== '/' && page.path === `${pathname}/`));
+  return found ? found[0] : pathname === '/index.html' ? 'home' : null;
+}
+
+// --- shared building blocks -------------------------------------------------
 
 function absolute(settings, path) {
   if (!path) return '';
   return path.startsWith('/') ? settings.site.url + path : path;
 }
 
-/**
- * Origins that absolute image URLs point at. The CSP lists all of them (including this site's own
- * origin, so images keep loading on localhost or after moving to a custom domain); the privacy
- * policy lists only third parties.
- */
-export function imageOrigins(settings, { includeOwn = false } = {}) {
-  const own = new URL(settings.site.url).origin;
-  const origins = new Set();
-  for (const url of [...settings.games.items.map((g) => g.image), settings.about.image]) {
-    if (!/^https:\/\//.test(url)) continue;
-    const origin = new URL(url).origin;
-    if (includeOwn || origin !== own) origins.add(origin);
-  }
-  return [...origins];
-}
-
-function contentSecurityPolicy(settings, provider) {
-  const images = imageOrigins(settings, { includeOwn: true });
+function contentSecurityPolicy(provider) {
   const sends = provider.ready && provider.responds !== 'navigate' ? provider.origin : "'none'";
   return [
     "default-src 'none'",
     "script-src 'self'",
     "style-src 'self'",
-    `img-src 'self' data:${images.length ? ' ' + images.join(' ') : ''}`,
+    "img-src 'self' data:",
     "font-src 'self'",
     `connect-src ${sends}`,
     `form-action 'self'${provider.ready ? ' ' + provider.origin : ''}`,
@@ -86,15 +152,6 @@ function contentSecurityPolicy(settings, provider) {
   ].join('; ');
 }
 
-function enabledSections(settings) {
-  return settings.sections.filter((s) => {
-    if (!s.enabled) return false;
-    if (s.id === 'games') return settings.games.items.length > 0;
-    if (s.id === 'devlog') return settings.devlog.items.length > 0;
-    return true;
-  });
-}
-
 function brand(settings, ctx) {
   const logo = settings.theme.logo
     ? `<img class="brand-logo" src="${esc(ctx.img(settings.theme.logo))}" alt="" width="36" height="36">`
@@ -102,88 +159,89 @@ function brand(settings, ctx) {
   return `<a class="brand" href="/">${logo}<span class="brand-name">${esc(settings.site.name)}</span></a>`;
 }
 
-function socialLinks(settings, cls = 'socials') {
+function socialLinks(settings, cls) {
   if (!settings.socials.length) return '';
   const items = settings.socials
     .map((s) => {
       const name = s.label || (BRAND_ICONS[s.platform]?.title ?? { email: 'Email', website: 'Website', rss: 'RSS feed' }[s.platform]);
       const external = /^https?:/.test(s.url);
-      return `<li><a href="${esc(s.url)}"${external ? ' rel="me noopener"' : ''} aria-label="${esc(name)}" title="${esc(name)}">${socialIcon(s.platform)}</a></li>`;
+      return `<li><a href="${esc(s.url)}"${external ? ' rel="me noopener"' : ''} aria-label="${esc(name)}" title="${esc(name)}">${brandIcon(s.platform)}</a></li>`;
     })
     .join('');
   return `<ul class="${cls}">${items}</ul>`;
 }
 
-function header(settings, ctx) {
-  const labels = { games: settings.games.heading, devlog: settings.devlog.heading, about: settings.about.navLabel };
-  const links = enabledSections(settings)
-    .filter((s) => labels[s.id])
-    .map((s) => `<a class="nav-link" href="/#${s.id}">${esc(labels[s.id])}</a>`)
+function header(settings, ctx, info) {
+  const links = NAV_IDS.filter((id) => settings.nav[id].enabled)
+    .map((id) => `<a class="nav-link" href="${NAV_PATHS[id]}"${info.nav === id ? ' aria-current="page"' : ''}>${esc(settings.nav[id].label)}</a>`)
     .join('');
+  // On the home page the big logo already shows the name.
+  const showBrand = !(info.id === 'home' && settings.home.showLogo);
+  if (!links && !showBrand) return '';
   return `<header class="site-header">
   <div class="container header-inner">
-    ${brand(settings, ctx)}
-    <nav class="site-nav" aria-label="Main">${links}<a class="btn btn-small btn-primary" href="/#subscribe">${esc(settings.newsletter.buttonLabel)}</a></nav>
+    ${showBrand ? brand(settings, ctx) : ''}
+    ${links ? `<nav class="site-nav" aria-label="Main">${links}</nav>` : ''}
   </div>
 </header>`;
 }
 
 function footer(settings, ctx) {
   const links = [
-    `<a href="/privacy/">Privacy</a>`,
+    `<a href="/privacy/">Privacy policy</a>`,
+    settings.nav.press.enabled ? `<a href="/press/">${esc(settings.nav.press.label)}</a>` : '',
     settings.legal.enabled ? `<a href="/legal/">${esc(settings.legal.heading)}</a>` : '',
     settings.site.contactEmail ? `<a href="mailto:${esc(settings.site.contactEmail)}">Contact</a>` : '',
   ].filter(Boolean);
   return `<footer class="site-footer">
   <div class="container footer-inner">
-    <div class="footer-brand">
-      ${brand(settings, ctx)}
-      <p class="footer-note">${icon('shield')}<span>No cookies, no tracking. Your email is only ever used for the newsletter.</span></p>
-    </div>
-    ${socialLinks(settings, 'socials footer-socials')}
+    ${brand(settings, ctx)}
     <nav class="footer-nav" aria-label="Footer">${links.join('')}</nav>
+    <p class="footer-note">${icon('shield')}<span>No cookies, no tracking. Your email is only ever used for the newsletter.</span></p>
     <p class="copyright">© ${ctx.year} ${esc(settings.site.copyrightName || settings.site.name)}</p>
   </div>
 </footer>`;
 }
 
-function layout(settings, ctx, pageId, main) {
-  const page = PAGES[pageId];
+function layout(settings, ctx, info, main) {
   const s = settings;
-  const title = pageId === 'home' ? s.seo.title : `${page.title ?? s.legal.heading} · ${s.site.name}`;
-  const noindex = !s.seo.indexable || page.noindex;
-  const canonical = s.site.url + page.path;
-  const ogImage = absolute(s, s.seo.ogImage);
-  const v = ctx.version ? `?v=${esc(ctx.version)}` : '';
-  const favicon = s.theme.favicon ? ctx.img(s.theme.favicon) : `/assets/img/favicon.svg${v}`;
-  const font = ctx.preview ? '' : preloadFont(s.theme.headingFont);
   const t = s.theme;
+  const title = info.id === 'home' ? s.seo.title : `${info.title} · ${s.site.name}`;
+  const description = info.description || s.seo.description;
+  const noindex = !s.seo.indexable || info.noindex;
+  const canonical = s.site.url + info.path;
+  const ogImage = absolute(s, info.image || s.seo.ogImage);
+  const ogAlt = info.image ? info.post?.imageAlt ?? '' : s.seo.ogImageAlt;
+  const v = ctx.version ? `?v=${esc(ctx.version)}` : '';
+  const favicon = t.favicon ? ctx.img(t.favicon) : `/assets/img/favicon.svg${v}`;
+  const font = ctx.preview ? '' : preloadFont(t.headingFont);
+  const feed = s.nav.news.enabled ? `<link rel="alternate" type="application/rss+xml" title="${esc(`${s.news.heading} · ${s.site.name}`)}" href="/news/feed.xml">\n` : '';
 
   return `<!doctype html>
-<html lang="${esc(s.site.language)}" data-hero="${t.heroBackground}" data-layout="${t.heroLayout}" data-cards="${t.cardStyle}" data-motion="${t.animations ? 'on' : 'off'}"${ctx.preview ? ' data-preview' : ''}>
+<html lang="${esc(s.site.language)}" data-hero="${t.heroBackground}" data-cards="${t.cardStyle}" data-buttons="${t.buttonStyle}" data-form="${t.formLayout}" data-motion="${t.animations ? 'on' : 'off'}"${ctx.preview ? ' data-preview' : ''}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-${ctx.preview ? '' : `<meta http-equiv="Content-Security-Policy" content="${esc(contentSecurityPolicy(s, ctx.provider))}">\n`}<meta name="referrer" content="strict-origin-when-cross-origin">
+${ctx.preview ? '' : `<meta http-equiv="Content-Security-Policy" content="${esc(contentSecurityPolicy(ctx.provider))}">\n`}<meta name="referrer" content="strict-origin-when-cross-origin">
 <title>${esc(title)}</title>
-<meta name="description" content="${esc(s.seo.description)}">
+<meta name="description" content="${esc(description)}">
 <meta name="robots" content="${noindex ? 'noindex, nofollow' : 'index, follow'}">
 <link rel="canonical" href="${esc(canonical)}">
 <meta name="theme-color" content="${t.colors.bg}">
-<meta property="og:type" content="website">
+<meta property="og:type" content="${info.ogType ?? 'website'}">
 <meta property="og:site_name" content="${esc(s.site.name)}">
 <meta property="og:title" content="${esc(title)}">
-<meta property="og:description" content="${esc(s.seo.description)}">
+<meta property="og:description" content="${esc(description)}">
 <meta property="og:url" content="${esc(canonical)}">
-${ogImage ? `<meta property="og:image" content="${esc(ogImage)}">\n<meta property="og:image:alt" content="${esc(s.seo.ogImageAlt)}">\n<meta name="twitter:card" content="summary_large_image">\n` : ''}<link rel="icon" href="${esc(favicon)}">
-<link rel="apple-touch-icon" href="${esc(s.theme.favicon ? favicon : '/assets/img/apple-touch-icon.png')}">
+${ogImage ? `<meta property="og:image" content="${esc(ogImage)}">\n<meta property="og:image:alt" content="${esc(ogAlt)}">\n<meta name="twitter:card" content="summary_large_image">\n` : ''}<link rel="icon" href="${esc(favicon)}">
+<link rel="apple-touch-icon" href="${esc(t.favicon ? favicon : '/assets/img/apple-touch-icon.png')}">
 <link rel="manifest" href="/site.webmanifest">
-${font ? `<link rel="preload" href="/assets/fonts/${font}" as="font" type="font/woff2" crossorigin>\n` : ''}<link rel="stylesheet" href="${esc(ctx.themeHref ?? `/assets/css/theme.css${v}`)}">
+${feed}${font ? `<link rel="preload" href="/assets/fonts/${font}" as="font" type="font/woff2" crossorigin>\n` : ''}<link rel="stylesheet" href="${esc(ctx.themeHref ?? `/assets/css/theme.css${v}`)}">
 <link rel="stylesheet" href="/assets/css/site.css${v}">
 ${ctx.preview ? '' : `<script type="module" src="/assets/js/site.js${v}"></script>\n`}</head>
-<body class="page-${pageId}">
+<body class="page-${info.kind}">
 <a class="skip-link" href="#main">Skip to content</a>
-${header(s, ctx)}
+${header(s, ctx, info)}
 <main id="main" tabindex="-1">
 ${main}
 </main>
@@ -193,7 +251,7 @@ ${footer(s, ctx)}
 `;
 }
 
-// --- home page ---------------------------------------------------------------
+// --- newsletter sign-up --------------------------------------------------------
 
 function consentHtml(nl) {
   const link = '<a href="/privacy/">privacy policy</a>';
@@ -201,168 +259,326 @@ function consentHtml(nl) {
   return text.includes('{privacy}') ? text.replace('{privacy}', link) : `${text} (${link})`;
 }
 
-function subscribeCard(settings, ctx) {
+function perks(settings) {
+  const nl = settings.newsletter;
+  if (!nl.showPerks || !nl.perks.length) return '';
+  return `<ul class="perks" aria-label="What subscribers get">${nl.perks.map((p) => `<li>${sigil('sigil perk-icon')}<span>${esc(p)}</span></li>`).join('')}</ul>`;
+}
+
+function wishlist(settings, ctx, cls = '') {
+  const w = settings.wishlist;
+  // The preview shows the button before a Steam link exists, so it can be styled and worded.
+  const url = w.url || (ctx.preview ? '#' : '');
+  if (!w.enabled || !url) return '';
+  return `<div class="wishlist${cls ? ` ${cls}` : ''}">
+        ${w.text ? `<p>${esc(w.text)}</p>` : ''}
+        <a class="btn btn-steam" href="${esc(url)}" target="_blank" rel="noopener">${brandIcon('steam')}<span>${esc(w.buttonLabel)}</span></a>
+      </div>`;
+}
+
+/** The email form and its success message. Without a connected provider, a "coming soon" notice. */
+function signup(settings, ctx) {
   const nl = settings.newsletter;
   const p = ctx.provider;
-  const perks = nl.perks.length
-    ? `<ul class="perks">${nl.perks.map((perk) => `<li>${sigil('sigil perk-icon')}<span>${esc(perk)}</span></li>`).join('')}</ul>`
-    : '';
+  const showSuccess = ctx.preview && ctx.previewSuccess;
+  if (!p.ready && !showSuccess) return `<div class="subscribe-closed">${icon('hourglass')}<p>${esc(nl.closedMessage)}</p></div>`;
 
-  let form;
-  if (p.ready) {
-    const hidden = Object.entries(p.hidden)
-      .map(([name, value]) => `<input type="hidden" name="${esc(name)}" value="${esc(value)}">`)
-      .join('');
-    form = `<form class="subscribe-form" method="post" action="${esc(p.action)}" accept-charset="utf-8" data-subscribe data-provider="${p.id}" data-responds="${p.responds}">
+  const hidden = p.ready
+    ? Object.entries(p.hidden)
+        .map(([name, value]) => `<input type="hidden" name="${esc(name)}" value="${esc(value)}">`)
+        .join('')
+    : '';
+  const form = p.ready
+    ? `<form class="subscribe-form" method="post" action="${esc(p.action)}" accept-charset="utf-8" data-subscribe data-provider="${p.id}" data-responds="${p.responds}"${showSuccess ? ' hidden' : ''}>
       ${hidden}
       <label class="field-label" for="subscribe-email">${esc(nl.emailLabel)}</label>
       <div class="field-row">
         <input class="input" id="subscribe-email" type="email" name="${esc(p.emailField)}" required maxlength="254" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="${esc(nl.placeholder)}">
-        <button class="btn btn-primary" type="submit"><span class="btn-label">${esc(nl.buttonLabel)}</span><span class="spinner" aria-hidden="true"></span></button>
+        <button class="btn btn-primary btn-submit" type="submit"><span class="btn-label">${esc(nl.buttonLabel)}</span><span class="spinner" aria-hidden="true"></span></button>
       </div>
       <div class="hp-field" aria-hidden="true">
         <label for="subscribe-website">Leave this field empty</label>
         <input id="subscribe-website" type="text" tabindex="-1" autocomplete="off" data-honeypot>
       </div>
+      ${nl.trustText ? `<p class="trust">${icon('lock')}<span>${esc(nl.trustText)}</span></p>` : ''}
       ${
         nl.requireConsent
           ? `<label class="consent"><input type="checkbox" required data-consent><span>${consentHtml(nl)}</span></label>`
           : `<p class="consent consent-text">${consentHtml(nl)}</p>`
       }
-      ${nl.finePrint ? `<p class="fine-print">${icon('lock')}<span>${esc(nl.finePrint)}</span></p>` : ''}
       <p class="form-status" role="status" aria-live="polite" data-status></p>
-    </form>
-    <div class="subscribe-success" data-success hidden tabindex="-1">
+    </form>`
+    : '';
+
+  return `<div class="signup" data-signup>
+    ${form}
+    <div class="subscribe-success" data-success${showSuccess ? '' : ' hidden'} tabindex="-1">
       <div class="success-icon">${icon('mail')}</div>
       <h3>${esc(nl.successTitle)}</h3>
       <div class="prose">${markdown(nl.successBody)}</div>
-    </div>`;
-  } else {
-    form = `<div class="subscribe-closed">${icon('hourglass')}<p>${esc(nl.closedMessage)}</p></div>`;
-  }
-
-  return `<aside class="subscribe-card card" id="subscribe" aria-labelledby="subscribe-title">
-    <h2 class="subscribe-title" id="subscribe-title">${esc(nl.heading)}</h2>
-    <div class="subscribe-body prose">${markdown(nl.body)}</div>
-    ${perks}
-    ${form}
-  </aside>`;
-}
-
-function hero(settings, ctx) {
-  const h = settings.hero;
-  const games = enabledSections(settings).some((s) => s.id === 'games');
-  return `<section class="hero" aria-labelledby="hero-title">
-  <div class="hero-bg" aria-hidden="true"><span class="hero-layer hero-layer-a"></span><span class="hero-layer hero-layer-b"></span></div>
-  <div class="container hero-inner">
-    <div class="hero-copy">
-      ${h.eyebrow ? `<p class="eyebrow">${sigil()}<span>${esc(h.eyebrow)}</span></p>` : ''}
-      <h1 id="hero-title">${esc(h.headline)}</h1>
-      <div class="lead prose">${markdown(h.intro)}</div>
-      ${games ? `<p class="hero-links"><a class="link-arrow" href="#games">See the games ${icon('arrow')}</a></p>` : ''}
+      ${wishlist(settings, ctx)}
     </div>
-    ${subscribeCard(settings, ctx)}
-  </div>
-</section>`;
+  </div>`;
 }
 
-function sectionHead(id, heading, intro) {
-  return `<header class="section-head">
-      <h2 id="${id}-title">${esc(heading)}</h2>
-      ${intro ? `<div class="section-intro prose">${markdown(intro)}</div>` : ''}
-    </header>`;
-}
-
-function gamesSection(settings, ctx) {
-  const g = settings.games;
-  const cards = g.items
-    .map((item) => {
-      const media = item.image
-        ? `<img src="${esc(ctx.img(item.image))}" alt="${esc(item.imageAlt)}" width="1200" height="630" loading="lazy" decoding="async">`
-        : `<span class="game-media-empty">${sigil()}</span>`;
-      const meta = [
-        item.status ? `<span class="badge">${esc(item.status)}</span>` : '',
-        ...item.tags.map((t) => `<span class="tag">${esc(t)}</span>`),
-      ].join('');
-      return `<article class="game-card card">
-        <div class="game-media">${media}</div>
-        <div class="game-body">
-          ${meta ? `<div class="game-meta">${meta}</div>` : ''}
-          <h3 class="game-title">${item.url ? `<a class="stretched-link" href="${esc(item.url)}">${esc(item.title)}</a>` : esc(item.title)}</h3>
-          ${item.description ? `<p class="game-description">${esc(item.description)}</p>` : ''}
-          ${item.url ? `<span class="link-arrow" aria-hidden="true">${esc(item.linkLabel)} ${icon('arrow')}</span>` : ''}
-        </div>
-      </article>`;
-    })
-    .join('\n');
-  return `<section class="section" id="games" aria-labelledby="games-title">
-  <div class="container">
-    ${sectionHead('games', g.heading, g.intro)}
-    <div class="game-grid">
-      ${cards}
-    </div>
-  </div>
-</section>`;
-}
-
-function devlogSection(settings) {
-  const d = settings.devlog;
-  const items = [...d.items]
-    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
-    .map((post) => {
-      const date = post.date ? `<time datetime="${post.date}">${esc(formatDate(post.date, settings.site.language))}</time>` : '';
-      const title = post.url ? `<a href="${esc(post.url)}">${esc(post.title)}</a>` : esc(post.title);
-      return `<li class="devlog-item card">${date}<h3>${title}</h3>${post.body ? `<div class="prose">${markdown(post.body)}</div>` : ''}</li>`;
-    })
-    .join('\n');
-  return `<section class="section" id="devlog" aria-labelledby="devlog-title">
+/** Compact sign-up box at the bottom of news pages. */
+function signupBox(settings, ctx) {
+  if (!settings.newsletter.showOnNews) return '';
+  return `<section class="signup-band" aria-labelledby="signup-box-title">
   <div class="container narrow">
-    ${sectionHead('devlog', d.heading, d.intro)}
-    <ol class="devlog-list">
-      ${items}
-    </ol>
-  </div>
-</section>`;
-}
-
-function aboutSection(settings, ctx) {
-  const a = settings.about;
-  const image = a.image
-    ? `<figure class="about-media card"><img src="${esc(ctx.img(a.image))}" alt="${esc(a.imageAlt)}" loading="lazy" decoding="async"></figure>`
-    : '';
-  return `<section class="section" id="about" aria-labelledby="about-title">
-  <div class="container about-grid${image ? ' has-image' : ''}">
-    <div class="about-copy">
-      <h2 id="about-title">${esc(a.heading)}</h2>
-      <div class="prose">${markdown(a.body)}</div>
-      ${socialLinks(settings, 'socials socials-large')}
-    </div>
-    ${image}
-  </div>
-</section>`;
-}
-
-function ctaSection(settings) {
-  const c = settings.cta;
-  return `<section class="section cta-section" aria-labelledby="cta-title">
-  <div class="container">
-    <div class="cta card">
-      ${sigil('sigil cta-sigil')}
-      <h2 id="cta-title">${esc(c.heading)}</h2>
-      ${c.body ? `<div class="prose">${markdown(c.body)}</div>` : ''}
-      <a class="btn btn-primary btn-large" href="#subscribe">${esc(c.buttonLabel)}</a>
+    <div class="signup-box card" id="subscribe">
+      <h2 id="signup-box-title" class="signup-hook">${esc(settings.newsletter.heading)}</h2>
+      ${perks(settings)}
+      ${signup(settings, ctx)}
     </div>
   </div>
 </section>`;
 }
+
+// --- home ---------------------------------------------------------------------
 
 function homePage(settings, ctx) {
-  const renderers = { games: gamesSection, devlog: devlogSection, about: aboutSection, cta: ctaSection };
-  const sections = enabledSections(settings).map((s) => renderers[s.id](settings, ctx));
-  return [hero(settings, ctx), ...sections].join('\n');
+  const h = settings.home;
+  const nl = settings.newsletter;
+  const logo = h.showLogo
+    ? `<h1 class="home-logo">${
+        h.logoImage
+          ? `<img src="${esc(ctx.img(h.logoImage))}" alt="${esc(h.logoImageAlt || settings.site.name)}">`
+          : `${sigil('sigil wordmark-sigil')}<span class="wordmark">${esc(settings.site.name)}</span>`
+      }</h1>`
+    : `<h1 class="visually-hidden">${esc(settings.site.name)}</h1>`;
+
+  const about =
+    h.about.enabled && (h.about.heading || h.about.body)
+      ? `<section class="home-block home-about"${h.about.heading ? ' aria-labelledby="about-title"' : ''}>
+      ${h.about.heading ? `<h2 id="about-title">${esc(h.about.heading)}</h2>` : ''}
+      <div class="prose">${markdown(h.about.body)}</div>
+    </section>`
+      : '';
+
+  const signupBlock = `<section class="home-block home-signup" id="subscribe" aria-labelledby="signup-title">
+      <h2 id="signup-title" class="signup-hook">${esc(nl.heading)}</h2>
+      ${nl.body ? `<div class="prose signup-body">${markdown(nl.body)}</div>` : ''}
+      ${perks(settings)}
+      ${signup(settings, ctx)}
+    </section>`;
+
+  const blocks = h.layout === 'signup-first' ? [signupBlock, about] : [about, signupBlock];
+  const band =
+    h.socials.enabled && settings.socials.length
+      ? `<section class="social-band"${h.socials.heading ? ' aria-labelledby="social-title"' : ' aria-label="Social links"'}>
+  <div class="container">
+    ${h.socials.heading ? `<h2 id="social-title">${esc(h.socials.heading)}</h2>` : ''}
+    ${socialLinks(settings, 'social-tiles')}
+  </div>
+</section>`
+      : '';
+
+  return `<section class="home-hero">
+  <div class="hero-bg" aria-hidden="true"><span class="hero-layer hero-layer-a"></span><span class="hero-layer hero-layer-b"></span></div>
+  <div class="container home-column">
+    ${logo}
+    ${blocks.filter(Boolean).join('\n    ')}
+  </div>
+</section>
+${band}`;
 }
 
-// --- other pages ---------------------------------------------------------------
+// --- news -----------------------------------------------------------------------
+
+function postDate(settings, post) {
+  return post.date ? `<time datetime="${post.date}">${esc(formatDate(post.date, settings.site.language))}</time>` : '';
+}
+
+function newsPage(settings, ctx) {
+  const n = settings.news;
+  const posts = sortedPosts(settings);
+  const cards = posts
+    .map(
+      (p) => `<article class="news-card card">
+        ${p.image ? `<div class="news-media"><img src="${esc(ctx.img(p.image))}" alt="${esc(p.imageAlt)}" loading="lazy" decoding="async"></div>` : ''}
+        <div class="news-body">
+          ${postDate(settings, p)}
+          <h2 class="news-title"><a class="stretched-link" href="/news/${p.slug}/">${esc(p.title || 'Untitled post')}</a></h2>
+          ${p.summary ? `<p class="news-summary">${esc(p.summary)}</p>` : ''}
+          <span class="link-arrow" aria-hidden="true">${esc(n.readMoreLabel)} ${icon('arrow')}</span>
+        </div>
+      </article>`
+    )
+    .join('\n');
+  return `<section class="page page-list">
+  <div class="container">
+    <header class="page-head">
+      <h1>${esc(n.heading)}</h1>
+      ${n.intro ? `<div class="prose lead">${markdown(n.intro)}</div>` : ''}
+      <p class="page-head-links"><a class="feed-link" href="/news/feed.xml">${icon('rss')}<span>RSS feed</span></a></p>
+    </header>
+    ${posts.length ? `<div class="news-grid">${cards}</div>` : `<p class="empty-state">${icon('hourglass')}<span>No news yet. Subscribe to hear first.</span></p>`}
+  </div>
+</section>
+${signupBox(settings, ctx)}`;
+}
+
+function postPage(settings, ctx, post) {
+  return `<article class="page post">
+  <div class="container narrow">
+    <p class="back-link"><a href="/news/">${icon('back')}<span>${esc(settings.news.heading)}</span></a></p>
+    <header class="post-head">
+      ${postDate(settings, post)}
+      <h1>${esc(post.title || 'Untitled post')}</h1>
+      ${post.summary ? `<p class="lead">${esc(post.summary)}</p>` : ''}
+    </header>
+    ${post.image ? `<figure class="post-cover"><img src="${esc(ctx.img(post.image))}" alt="${esc(post.imageAlt)}"></figure>` : ''}
+    <div class="prose post-body">${markdown(post.body)}</div>
+    ${post.url ? `<p class="actions"><a class="btn btn-ghost" href="${esc(post.url)}"${/^https?:/.test(post.url) ? ' rel="noopener"' : ''}>${esc(post.linkLabel || settings.news.readMoreLabel)} ${icon('arrow')}</a></p>` : ''}
+  </div>
+</article>
+${signupBox(settings, ctx)}`;
+}
+
+function rssFeed(settings) {
+  const s = settings;
+  const items = sortedPosts(s)
+    .map((p) => {
+      const url = `${s.site.url}/news/${p.slug}/`;
+      const date = p.date ? `<pubDate>${new Date(`${p.date}T12:00:00Z`).toUTCString()}</pubDate>` : '';
+      return `  <item><title>${esc(p.title)}</title><link>${esc(url)}</link><guid isPermaLink="true">${esc(url)}</guid>${date}<description>${esc(p.summary || plain(p.body, 300))}</description></item>`;
+    })
+    .join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+  <title>${esc(`${s.news.heading} · ${s.site.name}`)}</title>
+  <link>${esc(s.site.url)}/news/</link>
+  <description>${esc(plain(s.news.intro) || s.seo.description)}</description>
+  <language>${esc(s.site.language)}</language>
+  <atom:link href="${esc(s.site.url)}/news/feed.xml" rel="self" type="application/rss+xml"/>
+${items}
+</channel>
+</rss>
+`;
+}
+
+// --- press kit ------------------------------------------------------------------
+
+function factsheet(settings, section) {
+  const pr = settings.press;
+  const rows = pr.facts.map(
+    (f) => `<div class="fact"><dt>${esc(f.label)}</dt><dd>${f.url ? `<a href="${esc(f.url)}"${/^https?:/.test(f.url) ? ' rel="noopener"' : ''}>${esc(f.value || f.url)}</a>` : esc(f.value)}</dd></div>`
+  );
+  if (settings.site.contactEmail) rows.push(`<div class="fact"><dt>Press contact</dt><dd><a href="mailto:${esc(settings.site.contactEmail)}">${esc(settings.site.contactEmail)}</a></dd></div>`);
+  if (settings.socials.length) rows.push(`<div class="fact"><dt>Social</dt><dd>${socialLinks(settings, 'socials socials-small')}</dd></div>`);
+  if (!rows.length) return '';
+  return `<h2 id="press-factsheet-title">${esc(section.heading)}</h2>\n      <dl class="facts">${rows.join('')}</dl>`;
+}
+
+function pressContent(settings, id) {
+  const pr = settings.press;
+  switch (id) {
+    case 'description':
+    case 'history':
+      return pr[id] ? `<div class="prose">${markdown(pr[id])}</div>` : '';
+    case 'features':
+      return pr.features.length ? `<ul class="feature-list">${pr.features.map((f) => `<li>${sigil('sigil perk-icon')}<span>${esc(f)}</span></li>`).join('')}</ul>` : '';
+    case 'images': {
+      const items = pr.images.filter((i) => i.src);
+      return items.length
+        ? `<div class="press-gallery">${items
+            .map(
+              (i) => `<figure class="press-image">
+          <a href="${esc(i.src)}" download><img src="${esc(i.src)}" alt="${esc(i.caption)}" loading="lazy" decoding="async"></a>
+          <figcaption>${i.caption ? `<span>${esc(i.caption)}</span>` : ''}<a class="download-link" href="${esc(i.src)}" download>${icon('download')}Download</a></figcaption>
+        </figure>`
+            )
+            .join('')}</div>`
+        : '';
+    }
+    case 'logos': {
+      const items = pr.logos.filter((i) => i.src);
+      return items.length
+        ? `<div class="press-logos">${items
+            .map(
+              (i) => `<figure class="press-logo">
+          <div class="press-logo-tile tile-${i.background}"><img src="${esc(i.src)}" alt="${esc(i.label)}" loading="lazy" decoding="async"></div>
+          <figcaption>${i.label ? `<span>${esc(i.label)}</span>` : ''}<a class="download-link" href="${esc(i.src)}" download>${icon('download')}Download</a></figcaption>
+        </figure>`
+            )
+            .join('')}</div>`
+        : '';
+    }
+    case 'videos': {
+      const items = pr.videos.filter((v) => v.url);
+      return items.length
+        ? `<ul class="link-list">${items
+            .map((v) => `<li><a href="${esc(v.url)}" rel="noopener">${/youtube\.com|youtu\.be/.test(v.url) ? brandIcon('youtube') : icon('play')}<span>${esc(v.title || v.url)}</span></a></li>`)
+            .join('')}</ul>`
+        : '';
+    }
+    case 'quotes': {
+      const items = pr.quotes.filter((q) => q.quote);
+      return items.length
+        ? items
+            .map(
+              (q) => `<figure class="press-quote"><blockquote><p>${esc(q.quote)}</p></blockquote>${
+                q.source ? `<figcaption>${q.url ? `<a href="${esc(q.url)}" rel="noopener">${esc(q.source)}</a>` : esc(q.source)}</figcaption>` : ''
+              }</figure>`
+            )
+            .join('')
+        : '';
+    }
+    case 'team': {
+      const items = pr.team.filter((t) => t.name);
+      return items.length
+        ? `<ul class="team-list">${items
+            .map((t) => `<li><strong>${t.url ? `<a href="${esc(t.url)}"${/^https?:/.test(t.url) ? ' rel="noopener"' : ''}>${esc(t.name)}</a>` : esc(t.name)}</strong>${t.role ? `<span>${esc(t.role)}</span>` : ''}</li>`)
+            .join('')}</ul>`
+        : '';
+    }
+    case 'contact': {
+      const email = settings.site.contactEmail;
+      if (!pr.contact && !email) return '';
+      return `${pr.contact ? `<div class="prose">${markdown(pr.contact)}</div>` : ''}${email ? `<p class="actions"><a class="btn btn-primary" href="mailto:${esc(email)}">${icon('mail')}<span>${esc(email)}</span></a></p>` : ''}`;
+    }
+    default:
+      return '';
+  }
+}
+
+function pressPage(settings) {
+  const pr = settings.press;
+  const enabled = pr.sections.filter((s) => s.enabled);
+  const factSection = enabled.find((s) => s.id === 'factsheet');
+  const facts = factSection ? factsheet(settings, factSection) : '';
+  const sections = enabled
+    .filter((s) => s.id !== 'factsheet')
+    .map((s) => {
+      const content = pressContent(settings, s.id);
+      return content
+        ? `<section class="press-section" id="press-${s.id}" aria-labelledby="press-${s.id}-title">
+        <h2 id="press-${s.id}-title">${esc(s.heading)}</h2>
+        ${content}
+      </section>`
+        : '';
+    })
+    .filter(Boolean);
+
+  return `<section class="page page-press">
+  <div class="container">
+    <header class="page-head">
+      <h1>${esc(pr.heading)}</h1>
+      ${pr.intro ? `<div class="prose lead">${markdown(pr.intro)}</div>` : ''}
+    </header>
+    <div class="press-layout${facts ? ' has-factsheet' : ''}">
+      ${facts ? `<aside class="press-facts card" aria-labelledby="press-factsheet-title">\n      ${facts}\n      </aside>` : ''}
+      <div class="press-main">
+      ${sections.join('\n      ') || `<p class="empty-state">${icon('hourglass')}<span>The press kit is being put together.</span></p>`}
+      </div>
+    </div>
+  </div>
+</section>`;
+}
+
+// --- other pages ------------------------------------------------------------------
 
 function simplePage(title, body, extraClass = '') {
   return `<section class="page ${extraClass}">
@@ -386,7 +602,6 @@ function privacyPage(settings, ctx) {
       ? `<a href="${esc(prov.privacyUrl)}" rel="noopener">${esc(prov.name)}</a>`
       : esc(prov.name)
     : 'our email newsletter provider';
-  const images = imageOrigins(s);
 
   const processors = [
     prov.ready
@@ -419,13 +634,13 @@ function privacyPage(settings, ctx) {
         ? ' The provider may also record whether an email was opened and which links were clicked, so we can see which updates are interesting. This uses a small image and tracked links in the email, and you can block it by turning off image loading in your email app.'
         : ''
     }</p>
-    <p><strong>Why:</strong> to send you game development updates, news about releases and playtest invitations.</p>
+    <p><strong>Why:</strong> to send you development updates, playtest invitations and news about releases.</p>
     <p><strong>Legal basis:</strong> your consent (Art. 6(1)(a) GDPR). We use double opt-in: you only start receiving emails after you click the link in the confirmation email. You can withdraw your consent at any time using the unsubscribe link in every email, or by contacting us. Withdrawing consent does not affect anything sent before.</p>
     <p><strong>How it works:</strong> when you press the subscribe button, your email address is sent directly from your browser to ${providerLink}. It is never stored on this website.</p>
 
     <h2>Visiting this website</h2>
     <p>This website is hosted on GitHub Pages. Like any web server, GitHub processes technical data such as your IP address, browser type and the pages requested, to deliver the site and keep it secure. GitHub may log visitor IP addresses for security purposes. The legal basis is our legitimate interest in running a secure website (Art. 6(1)(f) GDPR). We do not have access to these logs and do not use any analytics.</p>
-    <p>Fonts and images are served from this website itself${images.length ? `, except images loaded from ${images.map((o) => esc(new URL(o).host)).join(', ')}` : ''}. No content is loaded from advertising or tracking services.</p>
+    <p>Fonts and images are served from this website itself. No content is loaded from other servers, advertising or tracking services. Links to other sites, such as Steam or social networks, only send you there when you click them.</p>
 
     <h2>Cookies and local storage</h2>
     <p>This website does not set cookies and does not store anything in your browser. That's why there is no cookie banner.</p>
@@ -465,16 +680,16 @@ function privacyPage(settings, ctx) {
   return simplePage('Privacy policy', body, 'page-legal');
 }
 
-function confirmedPage(settings) {
+function confirmedPage(settings, ctx) {
   const nl = settings.newsletter;
-  const games = enabledSections(settings).some((s) => s.id === 'games');
   return `<section class="page page-center">
   <div class="container narrow">
     <div class="success-icon success-icon-large">${icon('check')}</div>
     <h1>${esc(nl.confirmedTitle)}</h1>
     <div class="prose lead">${markdown(nl.confirmedBody)}</div>
+    ${wishlist(settings, ctx, 'wishlist-large')}
     <p class="actions">
-      ${games ? `<a class="btn btn-primary" href="/#games">Play the games</a>` : ''}
+      ${settings.nav.news.enabled ? `<a class="btn btn-ghost" href="/news/">Read the latest news</a>` : ''}
       <a class="btn btn-ghost" href="/">Back to the homepage</a>
     </p>
   </div>
@@ -496,13 +711,14 @@ function notFoundPage() {
 </section>`;
 }
 
-// --- public API ----------------------------------------------------------------
+// --- public API ------------------------------------------------------------------
 
 function context(settings, opts) {
   const now = opts.now ?? new Date();
   return {
     provider: resolveProvider(settings.newsletter),
     preview: Boolean(opts.preview),
+    previewSuccess: Boolean(opts.previewSuccess),
     version: opts.version ?? '',
     themeHref: opts.themeHref,
     img: opts.resolveImage ?? ((src) => src),
@@ -512,17 +728,21 @@ function context(settings, opts) {
   };
 }
 
-/** Render one page to an HTML string. Used for the admin preview. */
+/** Render one page to an HTML string (also used for the admin preview). Unknown ids render the 404 page. */
 export function renderPage(settings, pageId, opts = {}) {
   const ctx = context(settings, opts);
+  const info = pageInfo(settings, pageId) ?? pageInfo(settings, 'notfound');
   const bodies = {
     home: () => homePage(settings, ctx),
+    news: () => newsPage(settings, ctx),
+    post: () => postPage(settings, ctx, info.post),
+    press: () => pressPage(settings, ctx),
     privacy: () => privacyPage(settings, ctx),
     confirmed: () => confirmedPage(settings, ctx),
     legal: () => legalPage(settings, ctx),
     notfound: () => notFoundPage(settings, ctx),
   };
-  return layout(settings, ctx, pageId, (bodies[pageId] ?? bodies.home)());
+  return layout(settings, ctx, info, bodies[info.kind]());
 }
 
 /** Render every generated file of the site: { "path/in/dist": "contents" }. */
@@ -530,17 +750,18 @@ export function renderSite(settings, opts = {}) {
   const ctx = context(settings, opts);
   const s = settings;
   const files = {};
-  const pages = ['home', 'privacy', 'confirmed', 'notfound', ...(s.legal.enabled ? ['legal'] : [])];
-  for (const id of pages) files[PAGES[id].file] = renderPage(s, id, opts);
+  const pages = livePages(s);
+  for (const id of pages) files[pageInfo(s, id).file] = renderPage(s, id, opts);
+  if (s.nav.news.enabled) files['news/feed.xml'] = rssFeed(s);
 
   files['assets/css/theme.css'] = themeCss(s.theme);
   files['assets/img/favicon.svg'] = faviconSvg(s.theme.colors.accent);
 
-  const sitemapPages = ['home', 'privacy', ...(s.legal.enabled ? ['legal'] : [])];
   const today = ctx.now.toISOString().slice(0, 10);
+  const indexable = pages.filter((id) => !pageInfo(s, id).noindex);
   files['sitemap.xml'] = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${sitemapPages.map((id) => `  <url><loc>${esc(s.site.url + PAGES[id].path)}</loc><lastmod>${today}</lastmod></url>`).join('\n')}
+${indexable.map((id) => `  <url><loc>${esc(s.site.url + pageInfo(s, id).path)}</loc><lastmod>${today}</lastmod></url>`).join('\n')}
 </urlset>
 `;
 

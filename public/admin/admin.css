@@ -569,6 +569,10 @@ textarea.input {
   font-size: 1rem;
 }
 
+.panel-card > .btn {
+  justify-self: start;
+}
+
 .panel-card-desc {
   margin-top: -0.6rem;
   color: var(--muted);
@@ -1091,11 +1095,68 @@ textarea.input {
 .section-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.8rem;
   padding: 0.5rem 0.5rem 0.5rem 0.8rem;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--bg);
+}
+
+.section-main {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.8rem;
+  min-width: 0;
+}
+
+.section-name {
+  min-width: 7.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.section-main .input {
+  flex: 1;
+  min-width: 10rem;
+}
+
+.menu-rows {
+  display: grid;
+  gap: 1rem;
+}
+
+.menu-row {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.check-item.optional .check-mark {
+  background: var(--panel-2);
+  color: var(--muted);
+}
+
+.preview-hidden {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--warn) 16%, transparent);
+  color: var(--warn);
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.preview-hidden .icon {
+  width: 14px;
+  height: 14px;
 }
 
 .history {

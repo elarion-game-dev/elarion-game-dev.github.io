@@ -3,16 +3,33 @@
 // strings are length-limited, enums/colours/URLs are validated, so a broken or tampered
 // site.json can never produce unsafe output.
 
-import { PROVIDER_IDS } from './providers.mjs';
-import { CARD_STYLES, FONT_IDS, HERO_BACKGROUNDS, HERO_LAYOUTS, PRESETS } from './themes.mjs';
 import { BRAND_ICONS } from './icons.mjs';
-import { clamp, isEmail, isHexColor, isPlainObject, safeAssetPath, safeImage, safeUrl } from './util.mjs';
+import { PROVIDER_IDS } from './providers.mjs';
+import { BUTTON_STYLES, CARD_STYLES, FONT_IDS, FORM_LAYOUTS, HEADING_CASES, HERO_BACKGROUNDS, PRESETS } from './themes.mjs';
+import { clamp, isEmail, isHexColor, isPlainObject, safeAssetPath, safeUrl, slugify } from './util.mjs';
 
-export const SCHEMA_VERSION = 1;
-export const SECTION_IDS = ['games', 'devlog', 'about', 'cta'];
-export const SECTION_LABELS = { games: 'Games', devlog: 'Devlog', about: 'About', cta: 'Closing call-to-action' };
-export const SOCIAL_PLATFORMS = { ...Object.fromEntries(Object.entries(BRAND_ICONS).map(([k, v]) => [k, v.title])), email: 'Email', website: 'Website', rss: 'RSS' };
-export const LIMITS = { games: 24, devlog: 60, perks: 6, socials: 16, tags: 6 };
+export const SCHEMA_VERSION = 2;
+export const NAV_IDS = ['home', 'news', 'press'];
+export const NAV_LABELS = { home: 'Home', news: 'News', press: 'Press kit' };
+export const HOME_LAYOUTS = { 'about-first': 'About text first, then sign-up', 'signup-first': 'Sign-up first, then about text' };
+export const PRESS_SECTION_IDS = ['factsheet', 'description', 'history', 'features', 'images', 'logos', 'videos', 'quotes', 'team', 'contact'];
+export const PRESS_SECTION_LABELS = {
+  factsheet: 'Factsheet',
+  description: 'Description',
+  history: 'History',
+  features: 'Features',
+  images: 'Screenshots',
+  logos: 'Logo & icon',
+  videos: 'Videos',
+  quotes: 'Press & quotes',
+  team: 'Team',
+  contact: 'Contact',
+};
+export const LOGO_BACKGROUNDS = { dark: 'Dark tile', light: 'Light tile', checker: 'Checkerboard' };
+export const SOCIAL_PLATFORMS ={ ...Object.fromEntries(Object.entries(BRAND_ICONS).map(([k, v]) => [k, v.title])), email: 'Email', website: 'Website', rss: 'RSS' };
+export const LIMITS = { posts: 100, perks: 6, socials: 16, facts: 20, features: 20, images: 40, logos: 12, videos: 12, quotes: 20, team: 30 };
+
+const DEFAULT_PRESET = PRESETS.twilight;
 
 export const DEFAULT_SETTINGS = {
   schemaVersion: SCHEMA_VERSION,
@@ -23,11 +40,22 @@ export const DEFAULT_SETTINGS = {
     contactEmail: '',
     copyrightName: 'Elarion',
   },
-  hero: {
-    eyebrow: 'Indie game developer',
-    headline: 'Physics, chaos and a little bit of magic.',
-    intro:
-      "I'm Elarion, and I make browser games where things explode, shatter and pile up. Join the newsletter to follow each new game from its first prototype to launch.",
+  nav: {
+    home: { enabled: true, label: 'Home' },
+    news: { enabled: true, label: 'News' },
+    press: { enabled: true, label: 'Press Kit' },
+  },
+  home: {
+    layout: 'about-first',
+    showLogo: true,
+    logoImage: '',
+    logoImageAlt: '',
+    about: {
+      enabled: true,
+      heading: 'About Elarion',
+      body: 'Elarion is an indie game developer building a new game in the open. Follow along from the first sketches to launch day, and help shape the game in early playtests.',
+    },
+    socials: { enabled: true, heading: 'Follow Elarion' },
   },
   newsletter: {
     provider: 'none',
@@ -35,90 +63,90 @@ export const DEFAULT_SETTINGS = {
     mailerlite: { accountId: '', formId: '' },
     buttondown: { username: '', tag: 'website' },
     custom: { action: '', emailField: 'email', providerName: '', privacyUrl: '' },
-    heading: 'Follow the journey',
-    body: "Get an email when there's something worth showing: new prototypes, behind-the-scenes notes and early playtest invites.",
-    perks: ['Early access to playtests', 'Behind-the-scenes devlogs', 'Launch news before anyone else'],
-    emailLabel: 'Email address',
+    heading: 'Get early playtest access and exclusive development updates',
+    body: '',
+    showPerks: true,
+    perks: ['Exclusive screenshots', 'Early builds', 'Concept art', 'Developer insights'],
+    emailLabel: 'Email',
     placeholder: 'you@example.com',
     buttonLabel: 'Subscribe',
-    requireConsent: true,
-    consentText: "I'd like to receive the Elarion newsletter and I've read the {privacy}. I can unsubscribe at any time.",
-    finePrint: "No spam, ever. You'll confirm your address first, and every email has a one-click unsubscribe link.",
+    trustText: 'About one email a month. No spam, and you can unsubscribe with one click at any time.',
+    requireConsent: false,
+    consentText: 'By subscribing you agree to receive the Elarion newsletter. See the {privacy}.',
     successTitle: 'Almost there! Check your inbox.',
     successBody: "I've sent you a confirmation link. Click it to finish subscribing. Nothing there after a few minutes? Check your spam folder.",
-    closedMessage: 'The newsletter opens very soon. Check back in a day or two!',
+    closedMessage: 'Sign-ups open very soon. Check back in a day or two!',
     confirmedTitle: "You're in. Welcome aboard!",
-    confirmedBody: 'Thanks for confirming your email. The next devlog will land straight in your inbox. Until then, why not play one of the prototypes?',
+    confirmedBody: 'Thanks for confirming your email. Playtest invites, screenshots and development updates will land straight in your inbox.',
+    showOnNews: true,
+  },
+  wishlist: {
+    enabled: true,
+    url: '',
+    text: 'Wishlisting the game on Steam is the best way to support it.',
+    buttonLabel: 'Wishlist on Steam',
   },
   theme: {
-    preset: 'arcane',
-    colors: { ...PRESETS.arcane.colors },
-    headingFont: PRESETS.arcane.headingFont,
-    bodyFont: PRESETS.arcane.bodyFont,
-    baseSize: 17,
-    radius: 14,
-    heroLayout: 'split',
-    heroBackground: PRESETS.arcane.heroBackground,
+    preset: 'twilight',
+    colors: { ...DEFAULT_PRESET.colors },
+    headingFont: DEFAULT_PRESET.headingFont,
+    bodyFont: DEFAULT_PRESET.bodyFont,
+    headingCase: DEFAULT_PRESET.headingCase,
+    buttonStyle: DEFAULT_PRESET.buttonStyle,
+    formLayout: 'stacked',
+    baseSize: 18,
+    radius: DEFAULT_PRESET.radius,
+    heroBackground: DEFAULT_PRESET.heroBackground,
     heroImage: '',
-    heroOverlay: 65,
-    cardStyle: PRESETS.arcane.cardStyle,
+    heroBlur: 14,
+    heroOverlay: 70,
+    cardStyle: DEFAULT_PRESET.cardStyle,
     animations: true,
     logo: '',
     favicon: '',
   },
-  sections: SECTION_IDS.map((id) => ({ id, enabled: id !== 'devlog' })),
-  games: {
-    heading: 'Games',
-    intro: 'Prototypes you can play right now, straight in your browser.',
-    items: [
+  news: {
+    heading: 'News',
+    intro: 'Development updates, new builds and behind-the-scenes notes.',
+    readMoreLabel: 'Read more',
+    posts: [
       {
-        title: 'Mage vs. Horde',
-        description: 'Cast huge spells from a tower into an endless horde of orcs. A physics prototype.',
-        url: 'https://elarion-game-dev.github.io/mage-vs-horde/',
-        image: 'https://elarion-game-dev.github.io/mage-vs-horde/preview.jpg',
-        imageAlt: 'A meteor lands in a horde of orcs, seen from the top of a stone tower.',
-        status: 'Playable prototype',
-        tags: ['Browser', 'Physics'],
-        linkLabel: 'Play in browser',
-      },
-      {
-        title: 'Bottle Roll Incremental',
-        description: 'Roll glass bottles down the stairs, film the smash and grow your channel.',
-        url: 'https://elarion-game-dev.github.io/bottle-roll-incremental/',
-        image: 'https://elarion-game-dev.github.io/bottle-roll-incremental/preview.jpg',
-        imageAlt: 'A glass bottle shattering on a flight of stairs.',
-        status: 'Playable',
-        tags: ['Browser', 'Incremental'],
-        linkLabel: 'Play in browser',
-      },
-    ],
-  },
-  devlog: {
-    heading: 'Devlog',
-    intro: 'Notes from the workbench.',
-    items: [
-      {
+        title: 'Welcome to Elarion',
+        slug: 'welcome',
         date: '2026-10-25',
-        title: 'The Elarion site is live',
-        body: 'A home for my games, and a newsletter for everyone who wants to follow along.',
+        image: '',
+        imageAlt: '',
+        summary: 'The site is live. This is where development news will land.',
+        body: "This is where I'll post development news: new builds, screenshots, concept art and the occasional deep-dive into how things work.\n\nWant it all first? Join the newsletter. Subscribers get early playtest access.",
         url: '',
+        linkLabel: '',
       },
     ],
   },
-  about: {
-    heading: 'About Elarion',
-    navLabel: 'About',
-    body:
-      "Elarion is the name I make games under. I build for the browser, prototype fast and share the process along the way, including the parts that don't work.\n\nRight now I'm exploring physics-heavy ideas: hordes, destruction and satisfying chaos. Subscribe and you'll see each new prototype first.",
-    image: '',
-    imageAlt: '',
+  press: {
+    heading: 'Press kit',
+    intro: 'Everything you need to write about Elarion. All images and logos may be used in coverage.',
+    sections: PRESS_SECTION_IDS.map((id) => ({ id, enabled: true, heading: PRESS_SECTION_LABELS[id] })),
+    facts: [
+      { label: 'Developer', value: 'Elarion', url: '' },
+      { label: 'Status', value: 'First game in development', url: '' },
+      { label: 'Website', value: 'elarion-game-dev.github.io', url: 'https://elarion-game-dev.github.io/' },
+    ],
+    description: 'Elarion is an independent game developer. The first game is in development and will be announced soon.\n\nJoin the newsletter for early playtest access and exclusive development updates.',
+    history: '',
+    features: [],
+    images: [],
+    logos: [
+      { src: '/assets/press/elarion-logo-light.png', label: 'Logo, light (for dark backgrounds)', background: 'dark' },
+      { src: '/assets/press/elarion-logo-dark.png', label: 'Logo, dark (for light backgrounds)', background: 'light' },
+      { src: '/assets/press/elarion-mark.png', label: 'Icon', background: 'dark' },
+    ],
+    videos: [],
+    quotes: [],
+    team: [],
+    contact: 'For press enquiries, review copies and interviews, get in touch.',
   },
-  cta: {
-    heading: "Don't miss the next game",
-    body: "One email when there's something new to play. No spam, unsubscribe any time.",
-    buttonLabel: 'Join the newsletter',
-  },
-  socials: [{ platform: 'github', url: 'https://github.com/elarion-game-dev', label: '' }],
+  socials: [],
   privacy: {
     controllerName: '',
     controllerAddress: '',
@@ -135,9 +163,9 @@ export const DEFAULT_SETTINGS = {
   },
   seo: {
     title: 'Elarion · Indie game developer',
-    description: 'Elarion makes physics-driven browser games. Play the prototypes and join the newsletter to follow the journey.',
+    description: 'Elarion is an indie game developer. Join the newsletter for early playtest access and exclusive development updates.',
     ogImage: '/assets/img/og.png',
-    ogImageAlt: 'Elarion: indie game developer',
+    ogImageAlt: 'Elarion: get early playtest access and exclusive development updates',
     indexable: true,
   },
 };
@@ -149,65 +177,106 @@ function str(value, max, fallback = '') {
   return value.replace(/\r\n?/g, '\n').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').slice(0, max);
 }
 const line = (value, max, fallback) => str(value, max, fallback).replace(/\n+/g, ' ');
+const required = (value, max, fallback) => line(value, max, fallback) || fallback;
 const bool = (value, fallback) => (typeof value === 'boolean' ? value : fallback);
 const oneOf = (value, options, fallback) => (options.includes(value) ? value : fallback);
 const color = (value, fallback) => (isHexColor(value) ? value.toLowerCase() : fallback);
 const num = (value, min, max, fallback) => (Number.isFinite(Number(value)) && value !== '' && value !== null ? Math.round(clamp(value, min, max)) : fallback);
 const date = (value, fallback = '') => (/^\d{4}-\d{2}-\d{2}$/.test(String(value ?? '')) ? value : fallback);
-const list = (value, max) => (Array.isArray(value) ? value.slice(0, max) : null);
+const list = (value, max, fallback) => (Array.isArray(value) ? value.slice(0, max) : fallback);
 const obj = (value) => (isPlainObject(value) ? value : {});
 const link = (value) => safeUrl(line(value, 500, ''));
 const httpLink = (value) => safeUrl(line(value, 500, ''), { allowMailto: false, allowRelative: false });
+// Images must be files uploaded to this site, so pages never load anything from another server.
+const image = (value) => safeAssetPath(value);
+
+/** Ordered on/off sections: keeps the given order, drops unknown ids, appends missing ones. */
+function sectionList(value, ids, defaults, labels) {
+  const seen = new Set();
+  const out = [];
+  for (const raw of list(value, 40, defaults)) {
+    const s = obj(raw);
+    if (!ids.includes(s.id) || seen.has(s.id)) continue;
+    seen.add(s.id);
+    out.push({ id: s.id, enabled: bool(s.enabled, true), heading: required(s.heading, 80, labels[s.id]) });
+  }
+  for (const id of ids) if (!seen.has(id)) out.push({ id, enabled: false, heading: labels[id] });
+  return out;
+}
+
+function posts(value) {
+  const used = new Set();
+  return list(value, LIMITS.posts, DEFAULT_SETTINGS.news.posts).map((raw) => {
+    const p = obj(raw);
+    const title = line(p.title, 140, '');
+    const base = typeof p.slug === 'string' && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(p.slug) && p.slug.length <= 60 ? p.slug : slugify(title, 'post');
+    let slug = base;
+    for (let n = 2; used.has(slug); n++) slug = `${base}-${n}`;
+    used.add(slug);
+    return {
+      title,
+      slug,
+      date: date(p.date),
+      image: image(p.image),
+      imageAlt: line(p.imageAlt, 200, ''),
+      summary: str(p.summary, 400, ''),
+      body: str(p.body, 20000, ''),
+      url: link(p.url),
+      linkLabel: line(p.linkLabel, 40, ''),
+    };
+  });
+}
 
 /**
  * Returns a complete, valid settings object. Missing values fall back to defaults only where
- * a fallback makes sense; free-text lists (games, socials…) keep exactly what the admin entered.
+ * a fallback makes sense; free-text lists (posts, socials…) keep exactly what the admin entered.
  */
 export function normalizeSettings(input) {
   const raw = obj(input);
   const d = DEFAULT_SETTINGS;
-
   const site = obj(raw.site);
-  const hero = obj(raw.hero);
+  const nav = obj(raw.nav);
+  const home = obj(raw.home);
   const nl = obj(raw.newsletter);
+  const wish = obj(raw.wishlist);
   const theme = obj(raw.theme);
   const colors = obj(theme.colors);
-  const games = obj(raw.games);
-  const devlog = obj(raw.devlog);
-  const about = obj(raw.about);
-  const cta = obj(raw.cta);
+  const news = obj(raw.news);
+  const press = obj(raw.press);
   const privacy = obj(raw.privacy);
   const legal = obj(raw.legal);
   const seo = obj(raw.seo);
-
-  const siteUrl = httpLink(site.url).replace(/\/+$/, '') || d.site.url;
   const email = line(site.contactEmail, 254, '').trim();
-
-  const sectionsIn = list(raw.sections, 20) ?? d.sections;
-  const seen = new Set();
-  const sections = [];
-  for (const s of sectionsIn) {
-    const id = obj(s).id;
-    if (SECTION_IDS.includes(id) && !seen.has(id)) {
-      seen.add(id);
-      sections.push({ id, enabled: bool(s.enabled, true) });
-    }
-  }
-  for (const id of SECTION_IDS) if (!seen.has(id)) sections.push({ id, enabled: false });
 
   return {
     schemaVersion: SCHEMA_VERSION,
     site: {
-      name: line(site.name, 60, d.site.name) || d.site.name,
-      url: siteUrl,
+      name: required(site.name, 60, d.site.name),
+      url: httpLink(site.url).replace(/\/+$/, '') || d.site.url,
       language: /^[a-z]{2,3}(-[A-Za-z]{2,4})?$/.test(site.language) ? site.language : d.site.language,
       contactEmail: isEmail(email) ? email : '',
       copyrightName: line(site.copyrightName, 80, d.site.copyrightName),
     },
-    hero: {
-      eyebrow: line(hero.eyebrow, 80, d.hero.eyebrow),
-      headline: line(hero.headline, 140, d.hero.headline),
-      intro: str(hero.intro, 600, d.hero.intro),
+    nav: Object.fromEntries(
+      NAV_IDS.map((id) => {
+        const item = obj(nav[id]);
+        return [id, { enabled: bool(item.enabled, d.nav[id].enabled), label: required(item.label, 30, d.nav[id].label) }];
+      })
+    ),
+    home: {
+      layout: oneOf(home.layout, Object.keys(HOME_LAYOUTS), d.home.layout),
+      showLogo: bool(home.showLogo, d.home.showLogo),
+      logoImage: image(home.logoImage),
+      logoImageAlt: line(home.logoImageAlt, 200, ''),
+      about: {
+        enabled: bool(obj(home.about).enabled, d.home.about.enabled),
+        heading: line(obj(home.about).heading, 100, d.home.about.heading),
+        body: str(obj(home.about).body, 3000, d.home.about.body),
+      },
+      socials: {
+        enabled: bool(obj(home.socials).enabled, d.home.socials.enabled),
+        heading: line(obj(home.socials).heading, 80, d.home.socials.heading),
+      },
     },
     newsletter: {
       provider: oneOf(nl.provider, PROVIDER_IDS, 'none'),
@@ -216,84 +285,84 @@ export function normalizeSettings(input) {
       buttondown: { username: line(obj(nl.buttondown).username, 64, '').trim(), tag: line(obj(nl.buttondown).tag, 40, '').trim() },
       custom: {
         action: httpLink(obj(nl.custom).action),
-        emailField: line(obj(nl.custom).emailField, 64, 'email').trim() || 'email',
+        emailField: required(line(obj(nl.custom).emailField, 64, '').trim(), 64, 'email'),
         providerName: line(obj(nl.custom).providerName, 60, '').trim(),
         privacyUrl: httpLink(obj(nl.custom).privacyUrl),
       },
-      heading: line(nl.heading, 100, d.newsletter.heading),
-      body: str(nl.body, 500, d.newsletter.body),
-      perks: (list(nl.perks, LIMITS.perks) ?? d.newsletter.perks).map((p) => line(p, 100, '')).filter(Boolean),
-      emailLabel: line(nl.emailLabel, 60, d.newsletter.emailLabel) || d.newsletter.emailLabel,
+      heading: required(nl.heading, 140, d.newsletter.heading),
+      body: str(nl.body, 600, d.newsletter.body),
+      showPerks: bool(nl.showPerks, d.newsletter.showPerks),
+      perks: list(nl.perks, LIMITS.perks, d.newsletter.perks).map((p) => line(p, 60, '')).filter(Boolean),
+      emailLabel: required(nl.emailLabel, 60, d.newsletter.emailLabel),
       placeholder: line(nl.placeholder, 60, d.newsletter.placeholder),
-      buttonLabel: line(nl.buttonLabel, 40, d.newsletter.buttonLabel) || d.newsletter.buttonLabel,
+      buttonLabel: required(nl.buttonLabel, 40, d.newsletter.buttonLabel),
+      trustText: line(nl.trustText, 300, d.newsletter.trustText),
       requireConsent: bool(nl.requireConsent, d.newsletter.requireConsent),
-      consentText: line(nl.consentText, 400, d.newsletter.consentText) || d.newsletter.consentText,
-      finePrint: line(nl.finePrint, 300, d.newsletter.finePrint),
-      successTitle: line(nl.successTitle, 100, d.newsletter.successTitle) || d.newsletter.successTitle,
+      consentText: required(nl.consentText, 400, d.newsletter.consentText),
+      successTitle: required(nl.successTitle, 100, d.newsletter.successTitle),
       successBody: str(nl.successBody, 500, d.newsletter.successBody),
       closedMessage: line(nl.closedMessage, 200, d.newsletter.closedMessage),
-      confirmedTitle: line(nl.confirmedTitle, 100, d.newsletter.confirmedTitle) || d.newsletter.confirmedTitle,
+      confirmedTitle: required(nl.confirmedTitle, 100, d.newsletter.confirmedTitle),
       confirmedBody: str(nl.confirmedBody, 600, d.newsletter.confirmedBody),
+      showOnNews: bool(nl.showOnNews, d.newsletter.showOnNews),
+    },
+    wishlist: {
+      enabled: bool(wish.enabled, d.wishlist.enabled),
+      url: httpLink(wish.url),
+      text: line(wish.text, 200, d.wishlist.text),
+      buttonLabel: required(wish.buttonLabel, 40, d.wishlist.buttonLabel),
     },
     theme: {
       preset: oneOf(theme.preset, [...Object.keys(PRESETS), 'custom'], 'custom'),
       colors: Object.fromEntries(Object.entries(d.theme.colors).map(([k, v]) => [k, color(colors[k], v)])),
       headingFont: oneOf(theme.headingFont, FONT_IDS, d.theme.headingFont),
       bodyFont: oneOf(theme.bodyFont, FONT_IDS, d.theme.bodyFont),
+      headingCase: oneOf(theme.headingCase, Object.keys(HEADING_CASES), d.theme.headingCase),
+      buttonStyle: oneOf(theme.buttonStyle, Object.keys(BUTTON_STYLES), d.theme.buttonStyle),
+      formLayout: oneOf(theme.formLayout, Object.keys(FORM_LAYOUTS), d.theme.formLayout),
       baseSize: num(theme.baseSize, 14, 22, d.theme.baseSize),
       radius: num(theme.radius, 0, 32, d.theme.radius),
-      heroLayout: oneOf(theme.heroLayout, Object.keys(HERO_LAYOUTS), d.theme.heroLayout),
       heroBackground: oneOf(theme.heroBackground, Object.keys(HERO_BACKGROUNDS), d.theme.heroBackground),
-      heroImage: safeAssetPath(theme.heroImage),
+      heroImage: image(theme.heroImage),
+      heroBlur: num(theme.heroBlur, 0, 40, d.theme.heroBlur),
       heroOverlay: num(theme.heroOverlay, 0, 95, d.theme.heroOverlay),
       cardStyle: oneOf(theme.cardStyle, Object.keys(CARD_STYLES), d.theme.cardStyle),
       animations: bool(theme.animations, d.theme.animations),
-      logo: safeAssetPath(theme.logo),
-      favicon: safeAssetPath(theme.favicon),
+      logo: image(theme.logo),
+      favicon: image(theme.favicon),
     },
-    sections,
-    games: {
-      heading: line(games.heading, 80, d.games.heading),
-      intro: str(games.intro, 400, d.games.intro),
-      items: (list(games.items, LIMITS.games) ?? d.games.items).map((g) => {
-        const item = obj(g);
-        return {
-          title: line(item.title, 80, ''),
-          description: str(item.description, 500, ''),
-          url: link(item.url),
-          image: safeImage(item.image),
-          imageAlt: line(item.imageAlt, 200, ''),
-          status: line(item.status, 40, ''),
-          tags: (list(item.tags, LIMITS.tags) ?? []).map((t) => line(t, 24, '')).filter(Boolean),
-          linkLabel: line(item.linkLabel, 40, 'Play'),
-        };
-      }),
+    news: {
+      heading: required(news.heading, 80, d.news.heading),
+      intro: str(news.intro, 500, d.news.intro),
+      readMoreLabel: required(news.readMoreLabel, 40, d.news.readMoreLabel),
+      posts: posts(news.posts),
     },
-    devlog: {
-      heading: line(devlog.heading, 80, d.devlog.heading),
-      intro: str(devlog.intro, 400, ''),
-      items: (list(devlog.items, LIMITS.devlog) ?? d.devlog.items).map((p) => {
-        const item = obj(p);
-        return { date: date(item.date), title: line(item.title, 120, ''), body: str(item.body, 2000, ''), url: link(item.url) };
-      }),
+    press: {
+      heading: required(press.heading, 80, d.press.heading),
+      intro: str(press.intro, 1000, d.press.intro),
+      sections: sectionList(press.sections, PRESS_SECTION_IDS, d.press.sections, PRESS_SECTION_LABELS),
+      facts: list(press.facts, LIMITS.facts, d.press.facts)
+        .map((f) => ({ label: line(obj(f).label, 60, ''), value: line(obj(f).value, 200, ''), url: link(obj(f).url) }))
+        .filter((f) => f.label || f.value),
+      description: str(press.description, 6000, d.press.description),
+      history: str(press.history, 6000, ''),
+      features: list(press.features, LIMITS.features, []).map((f) => line(f, 200, '')).filter(Boolean),
+      images: list(press.images, LIMITS.images, []).map((i) => ({ src: image(obj(i).src), caption: line(obj(i).caption, 200, '') })),
+      logos: list(press.logos, LIMITS.logos, d.press.logos).map((i) => ({
+        src: image(obj(i).src),
+        label: line(obj(i).label, 100, ''),
+        background: oneOf(obj(i).background, Object.keys(LOGO_BACKGROUNDS), 'checker'),
+      })),
+      videos: list(press.videos, LIMITS.videos, []).map((v) => ({ title: line(obj(v).title, 120, ''), url: httpLink(obj(v).url) })),
+      quotes: list(press.quotes, LIMITS.quotes, []).map((q) => ({ quote: str(obj(q).quote, 600, ''), source: line(obj(q).source, 120, ''), url: httpLink(obj(q).url) })),
+      team: list(press.team, LIMITS.team, []).map((t) => ({ name: line(obj(t).name, 80, ''), role: line(obj(t).role, 80, ''), url: link(obj(t).url) })),
+      contact: str(press.contact, 1000, d.press.contact),
     },
-    about: {
-      heading: line(about.heading, 80, d.about.heading),
-      navLabel: line(about.navLabel, 30, d.about.navLabel) || d.about.navLabel,
-      body: str(about.body, 4000, d.about.body),
-      image: safeImage(about.image),
-      imageAlt: line(about.imageAlt, 200, ''),
-    },
-    cta: {
-      heading: line(cta.heading, 100, d.cta.heading),
-      body: str(cta.body, 400, d.cta.body),
-      buttonLabel: line(cta.buttonLabel, 40, d.cta.buttonLabel) || d.cta.buttonLabel,
-    },
-    socials: (list(raw.socials, LIMITS.socials) ?? d.socials)
+    socials: list(raw.socials, LIMITS.socials, d.socials)
       .map((s) => {
         const item = obj(s);
         const platform = oneOf(item.platform, Object.keys(SOCIAL_PLATFORMS), 'website');
-        return { platform, url: platform === 'email' ? safeUrl(line(item.url, 300, '')) : link(item.url), label: line(item.label, 40, '') };
+        return { platform, url: link(item.url), label: line(item.label, 40, '') };
       })
       .filter((s) => s.url),
     privacy: {
@@ -307,13 +376,13 @@ export function normalizeSettings(input) {
     },
     legal: {
       enabled: bool(legal.enabled, false),
-      heading: line(legal.heading, 80, d.legal.heading) || d.legal.heading,
+      heading: required(legal.heading, 80, d.legal.heading),
       body: str(legal.body, 6000, ''),
     },
     seo: {
-      title: line(seo.title, 120, d.seo.title) || d.seo.title,
+      title: required(seo.title, 120, d.seo.title),
       description: line(seo.description, 300, d.seo.description),
-      ogImage: safeImage(seo.ogImage),
+      ogImage: image(seo.ogImage),
       ogImageAlt: line(seo.ogImageAlt, 200, ''),
       indexable: bool(seo.indexable, true),
     },
@@ -333,8 +402,8 @@ export function setupChecklist(settings, provider) {
     {
       id: 'contact',
       done: Boolean(settings.site.contactEmail),
-      title: 'Add a contact email for privacy requests',
-      detail: 'Required by GDPR so subscribers can ask what data you hold. Shown on the privacy page.',
+      title: 'Add a contact email',
+      detail: 'Required by GDPR for privacy requests, and used as the press contact.',
       panel: 'privacy',
     },
     {
@@ -343,6 +412,14 @@ export function setupChecklist(settings, provider) {
       title: 'Fill in who runs the site',
       detail: 'Your name (or company) and country for the privacy policy.',
       panel: 'privacy',
+    },
+    {
+      id: 'wishlist',
+      done: !settings.wishlist.enabled || Boolean(settings.wishlist.url),
+      optional: true,
+      title: 'Add your Steam page (optional)',
+      detail: 'Shown as a "Wishlist on Steam" button after people subscribe.',
+      panel: 'home',
     },
   ];
 }

@@ -11,7 +11,7 @@ export const attr = esc;
 
 /**
  * Returns the URL if it is safe to put in an href/src, otherwise ''.
- * Allows https:, http:, mailto: and root-relative paths ("/games/"). Blocks javascript:, data:, etc.
+ * Allows https:, http:, mailto: and root-relative paths ("/press/"). Blocks javascript:, data:, etc.
  */
 export function safeUrl(value, { allowMailto = true, allowRelative = true } = {}) {
   const url = String(value ?? '').trim();
@@ -34,14 +34,6 @@ export function safeAssetPath(value) {
   return /^\/[A-Za-z0-9/_.-]+$/.test(path) && !path.includes('..') ? path : '';
 }
 
-/** An image reference: either a site asset path or an absolute https URL. */
-export function safeImage(value) {
-  const path = safeAssetPath(value);
-  if (path) return path;
-  const url = safeUrl(value, { allowMailto: false, allowRelative: false });
-  return url.startsWith('https://') ? url : '';
-}
-
 export function isEmail(value) {
   const email = String(value ?? '').trim();
   return email.length <= 254 && /^[^\s@<>()"',;:]+@[^\s@<>()"',;:]+\.[^\s@<>()"',;:]{2,}$/.test(email);
@@ -57,8 +49,8 @@ export function slugify(value, fallback = 'file') {
     .normalize('NFKD')
     .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 40);
+    .slice(0, 40)
+    .replace(/^-+|-+$/g, '');
   return slug || fallback;
 }
 
