@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "site": {
     "name": "Elarion",
     "url": "https://elarion-game-dev.github.io",
@@ -37,6 +37,7 @@
   },
   "socialBand": {
     "show": "all",
+    "layout": "inline",
     "heading": "Follow Elarion"
   },
   "footer": {
@@ -87,6 +88,10 @@
       "Exclusive previews",
       "Developer insights"
     ],
+    "perkIcon": "sparkle",
+    "perkImage": "",
+    "perkIconColor": "accent",
+    "perkIconSize": 14,
     "emailLabel": "Email",
     "placeholder": "you@example.com",
     "buttonLabel": "Subscribe",
@@ -107,24 +112,24 @@
     "buttonLabel": "Wishlist on Steam"
   },
   "theme": {
-    "preset": "frost",
+    "preset": "sunrise",
     "colors": {
-      "bg": "#f3f6fb",
-      "surface": "#ffffff",
-      "border": "#d9e0ec",
-      "text": "#111827",
-      "muted": "#556079",
-      "accent": "#3550f0",
+      "bg": "#ffffff",
+      "surface": "#fff6ee",
+      "border": "#f3dcc8",
+      "text": "#1f1610",
+      "muted": "#6e5a4c",
+      "accent": "#c2410c",
       "onAccent": "#ffffff",
-      "accent2": "#0f9f92"
+      "accent2": "#ea580c"
     },
-    "headingFont": "space-grotesk",
-    "bodyFont": "inter",
-    "headingCase": "normal",
+    "headingFont": "jost",
+    "bodyFont": "jost",
+    "headingCase": "uppercase",
     "buttonStyle": "solid",
     "formLayout": "stacked",
     "baseSize": 18,
-    "radius": 12,
+    "radius": 6,
     "heroBackground": "solid",
     "heroImage": "",
     "heroBlur": 14,
@@ -133,6 +138,85 @@
     "animations": false,
     "logo": "",
     "favicon": ""
+  },
+  "textStyles": {
+    "hook": {
+      "font": "",
+      "weight": 0,
+      "size": 100,
+      "case": "default",
+      "color": "default",
+      "customColor": "#ffffff",
+      "tracking": 0,
+      "shadow": "none",
+      "crt": true
+    },
+    "aboutHeading": {
+      "font": "",
+      "weight": 0,
+      "size": 100,
+      "case": "default",
+      "color": "default",
+      "customColor": "#ffffff",
+      "tracking": 0,
+      "shadow": "none",
+      "crt": true
+    },
+    "aboutText": {
+      "font": "",
+      "weight": 0,
+      "size": 100,
+      "case": "default",
+      "color": "default",
+      "customColor": "#ffffff",
+      "tracking": 0,
+      "shadow": "none",
+      "crt": true
+    },
+    "perks": {
+      "font": "",
+      "weight": 0,
+      "size": 100,
+      "case": "default",
+      "color": "default",
+      "customColor": "#ffffff",
+      "tracking": 0,
+      "shadow": "none",
+      "crt": true
+    },
+    "bandHeading": {
+      "font": "",
+      "weight": 0,
+      "size": 100,
+      "case": "default",
+      "color": "default",
+      "customColor": "#ffffff",
+      "tracking": 0,
+      "shadow": "none",
+      "crt": true
+    },
+    "pageHeadings": {
+      "font": "",
+      "weight": 0,
+      "size": 100,
+      "case": "default",
+      "color": "default",
+      "customColor": "#ffffff",
+      "tracking": 0,
+      "shadow": "none",
+      "crt": true
+    },
+    "menu": {
+      "font": "",
+      "weight": 0,
+      "size": 100,
+      "case": "default",
+      "color": "default",
+      "customColor": "#ffffff",
+      "tracking": 0,
+      "shadow": "none",
+      "crt": true
+    }
   },
   "news": {
     "heading": "News",
