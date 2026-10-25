@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "site": {
     "name": "Elarion",
     "url": "https://elarion-game-dev.github.io",
@@ -19,7 +19,10 @@
     "press": {
       "enabled": true,
       "label": "Press Kit"
-    }
+    },
+    "style": "bar-stepped",
+    "dividers": true,
+    "showSocials": true
   },
   "home": {
     "layout": "about-first",
@@ -30,10 +33,31 @@
       "enabled": true,
       "heading": "About",
       "body": "I'm creating a game about slaying hordes of enemies with absurdly powerful spells. "
-    },
-    "socials": {
+    }
+  },
+  "socialBand": {
+    "show": "all",
+    "heading": "Follow Elarion"
+  },
+  "footer": {
+    "note": "No cookies, no tracking."
+  },
+  "effects": {
+    "crt": {
       "enabled": true,
-      "heading": "Follow Elarion"
+      "scanlines": 22,
+      "flicker": true,
+      "rgbText": true,
+      "vignette": true
+    },
+    "halftone": {
+      "enabled": false,
+      "where": "home",
+      "color": "accent2",
+      "opacity": 30,
+      "size": 11,
+      "angle": 45,
+      "mouse": 60
     }
   },
   "newsletter": {
@@ -230,17 +254,23 @@
     {
       "platform": "youtube",
       "url": "https://www.youtube.com/@ElarionTheGameDev",
-      "label": ""
+      "label": "",
+      "inMenu": true,
+      "inBand": true
     },
     {
       "platform": "tiktok",
       "url": "https://www.tiktok.com/@elarion.game.dev",
-      "label": ""
+      "label": "",
+      "inMenu": true,
+      "inBand": true
     },
     {
       "platform": "x",
       "url": "https://x.com/ElarionGameDev",
-      "label": ""
+      "label": "",
+      "inMenu": true,
+      "inBand": true
     }
   ],
   "privacy": {
