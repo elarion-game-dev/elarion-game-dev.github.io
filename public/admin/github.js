@@ -103,9 +103,10 @@ export class GitHub {
     return this.request(`${this.base}/commits?path=${encodeURIComponent(path)}&sha=${encodeURIComponent(this.branch)}&per_page=${perPage}`);
   }
 
+  /** Latest run of the deploy workflow (other workflows, like Dependabot's, are ignored). */
   async latestRun(sha) {
     const query = sha ? `head_sha=${sha}&per_page=1` : `branch=${encodeURIComponent(this.branch)}&per_page=1`;
-    const data = await this.request(`${this.base}/actions/runs?${query}`);
+    const data = await this.request(`${this.base}/actions/workflows/deploy.yml/runs?${query}`);
     return data.workflow_runs?.[0] ?? null;
   }
 }
