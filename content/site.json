@@ -38,7 +38,7 @@
   "socialBand": {
     "show": "all",
     "layout": "inline",
-    "heading": "Follow Elarion"
+    "heading": "Follow me on socials"
   },
   "footer": {
     "note": "No cookies, no tracking."
@@ -88,7 +88,7 @@
       "Exclusive previews",
       "Developer insights"
     ],
-    "perkIcon": "sparkle",
+    "perkIcon": "star",
     "perkImage": "",
     "perkIconColor": "accent",
     "perkIconSize": 14,
@@ -176,7 +176,7 @@
     "perks": {
       "font": "",
       "weight": 0,
-      "size": 100,
+      "size": 95,
       "case": "default",
       "color": "default",
       "customColor": "#ffffff",
@@ -187,7 +187,7 @@
     "bandHeading": {
       "font": "",
       "weight": 0,
-      "size": 100,
+      "size": 90,
       "case": "default",
       "color": "default",
       "customColor": "#ffffff",
