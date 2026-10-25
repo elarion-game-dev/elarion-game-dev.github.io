@@ -33,7 +33,7 @@
     },
     "socials": {
       "enabled": true,
-      "heading": "Follow Elarion"
+      "heading": "Follow me on socials"
     }
   },
   "newsletter": {
@@ -55,19 +55,18 @@
       "providerName": "",
       "privacyUrl": ""
     },
-    "heading": "Get early playtest access and exclusive development updates",
+    "heading": "Stay tuned for more info really soon...",
     "body": "",
     "showPerks": true,
     "perks": [
-      "Exclusive screenshots",
       "Early builds",
-      "Concept art",
+      "Exclusive previews",
       "Developer insights"
     ],
     "emailLabel": "Email",
     "placeholder": "you@example.com",
     "buttonLabel": "Subscribe",
-    "trustText": "About one email a month. No spam, and you can unsubscribe with one click at any time.",
+    "trustText": "No spam, and you can unsubscribe with one click at any time.",
     "requireConsent": false,
     "consentText": "By subscribing you agree to receive the Elarion newsletter. See the {privacy}.",
     "successTitle": "Almost there! Check your inbox.",
@@ -78,7 +77,7 @@
     "showOnNews": true
   },
   "wishlist": {
-    "enabled": true,
+    "enabled": false,
     "url": "",
     "text": "Wishlisting the game on Steam is the best way to support it.",
     "buttonLabel": "Wishlist on Steam"
