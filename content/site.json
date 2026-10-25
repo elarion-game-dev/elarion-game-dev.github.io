@@ -23,13 +23,13 @@
   },
   "home": {
     "layout": "about-first",
-    "showLogo": true,
+    "showLogo": false,
     "logoImage": "",
     "logoImageAlt": "",
     "about": {
       "enabled": true,
-      "heading": "About Elarion",
-      "body": "Elarion is an indie game developer building a new game in the open. Follow along from the first sketches to launch day, and help shape the game in early playtests."
+      "heading": "About",
+      "body": "I'm creating a game about slaying hordes of enemies with absurdly powerful spells. "
     },
     "socials": {
       "enabled": true,
