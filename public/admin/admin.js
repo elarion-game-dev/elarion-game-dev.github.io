@@ -3,7 +3,7 @@
 // that triggers the deploy workflow.
 
 import { DEPLOY } from '../assets/lib/deploy.mjs';
-import { pageIdForPath, previewPages, renderPage, sortedPosts } from '../assets/lib/render.mjs';
+import { pageIdForPath, perkCss, previewPages, renderPage, sortedPosts } from '../assets/lib/render.mjs';
 import { DEFAULT_SETTINGS, normalizeSettings } from '../assets/lib/settings.mjs';
 import { FONTS, PRESETS, PRESET_KEYS, fontFaces, fontStack, themeCss } from '../assets/lib/themes.mjs';
 import { getPath, setPath, slugify } from '../assets/lib/util.mjs';
@@ -53,16 +53,17 @@ const app = {
   },
   normalized: () => normalizeSettings(app.settings),
   rerender: () => renderPanel(),
-  goto(id) {
+  goto(id, { follow = true } = {}) {
     app.panel = id;
     history.replaceState(null, '', `#${id}`);
     renderNav();
     renderPanel();
     // Follow along in the preview, but stay on a news post while editing news.
     const page = PANELS.find((p) => p.id === id)?.page;
-    if (page && !(page === 'news' && app.previewPage.startsWith('post:'))) setPreviewPage(page);
+    if (follow && page && !(page === 'news' && app.previewPage.startsWith('post:'))) setPreviewPage(page);
     ui.editor?.focus({ preventScroll: true });
   },
+  editField,
   setPreviewSuccess(show) {
     app.previewSuccess = show;
     renderPanel();
@@ -439,7 +440,7 @@ function renderPreview() {
   const settings = app.normalized();
   syncPageSelect(settings);
   const heroImage = settings.theme.heroImage ? absolute(app.imageSrc(settings.theme.heroImage)) : '';
-  const css = themeCss(settings.theme, { imageUrl: heroImage, fontBase: FONT_BASE, effects: settings.effects });
+  const css = themeCss(settings.theme, { imageUrl: heroImage, fontBase: FONT_BASE, effects: settings.effects, textStyles: settings.textStyles, perkIcon: perkCss(settings) });
   const nextThemeUrl = URL.createObjectURL(new Blob([css], { type: 'text/css' }));
   const html = renderPage(settings, app.previewPage, { preview: true, previewSuccess: app.previewSuccess, themeHref: nextThemeUrl, resolveImage: app.imageSrc });
 
@@ -472,6 +473,13 @@ function wirePreview(doc) {
   doc.addEventListener('submit', (event) => event.preventDefault());
   doc.addEventListener('click', (event) => {
     const anchor = event.target.closest('a[href]');
+    // Clicking a text opens its field, unless the click was on a link inside that text.
+    const editable = event.target.closest('[data-edit]');
+    if (editable && !(anchor && editable.contains(anchor))) {
+      event.preventDefault();
+      editField(editable.dataset.edit);
+      return;
+    }
     if (!anchor) return;
     event.preventDefault();
     // The phone menu opens with :target on the live site; the preview toggles it directly.
@@ -489,6 +497,35 @@ function wirePreview(doc) {
     if (page) setPreviewPage(page, url.hash.slice(1));
     else if (href !== '#') window.open(url.href, '_blank', 'noopener,noreferrer');
   });
+}
+
+// Which panel holds the field for a text clicked in the preview (first matching prefix wins).
+const EDIT_PANELS = [
+  ['newsletter.closedMessage', 'newsletter'],
+  ['newsletter.confirmed', 'newsletter'],
+  ['newsletter.', 'home'],
+  ['wishlist.', 'home'],
+  ['socialBand.', 'home'],
+  ['home.', 'home'],
+  ['footer.', 'brand'],
+  ['news.', 'news'],
+  ['press.', 'press'],
+];
+
+/** Open the panel with this settings path, then scroll to its field and focus it. */
+function editField(path) {
+  const panel = EDIT_PANELS.find(([prefix]) => path.startsWith(prefix))?.[1];
+  if (!panel) return;
+  app.goto(panel, { follow: false });
+  const field = ui.editor.querySelector(`[data-path="${CSS.escape(path)}"]`);
+  if (!field) return;
+  const input = field.matches('input, textarea') ? field : field.querySelector('input, textarea');
+  field.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  input?.focus({ preventScroll: true });
+  field.classList.remove('flash');
+  void field.offsetWidth; // restart the animation
+  field.classList.add('flash');
+  togglePreview(false);
 }
 
 function setPreviewPage(page, anchor = '') {
@@ -573,6 +610,7 @@ const AREA_NAMES = {
   nav: 'menu',
   home: 'home page',
   socialBand: 'social band',
+  textStyles: 'text styles',
   footer: 'footer',
   effects: 'effects',
   newsletter: 'newsletter',

@@ -1,8 +1,10 @@
 // The admin's editing panels. Each panel returns DOM nodes bound to paths in the settings draft.
 // `page` is the preview page a panel switches to when it is opened.
 
+import { PERK_ICONS, perkIconSvg } from '../assets/lib/icons.mjs';
 import { PROVIDERS, resolveProvider } from '../assets/lib/providers.mjs';
 import {
+  BAND_LAYOUTS,
   BAND_PLACES,
   HALFTONE_COLORS,
   HALFTONE_PLACES,
@@ -12,6 +14,7 @@ import {
   NAV_IDS,
   NAV_LABELS,
   NAV_STYLES,
+  PERK_ICON_COLORS,
   PRESS_SECTION_LABELS,
   SOCIAL_GROUPS,
   SOCIAL_PLATFORMS,
@@ -21,11 +24,16 @@ import {
   BUTTON_STYLES,
   CARD_STYLES,
   COLOR_KEYS,
+  DEFAULT_TEXT_STYLE,
   FONTS,
   FORM_LAYOUTS,
   HEADING_CASES,
   HERO_BACKGROUNDS,
   PRESETS,
+  TEXT_CASES,
+  TEXT_COLORS,
+  TEXT_ROLES,
+  TEXT_SHADOWS,
   contrastReport,
 } from '../assets/lib/themes.mjs';
 import { isEmail, safeUrl, slugify } from '../assets/lib/util.mjs';
@@ -134,6 +142,58 @@ function pages(app) {
 
 // --- home page ------------------------------------------------------------------------------
 
+function perkIconPicker(app) {
+  const current = app.get('newsletter.perkIcon');
+  const choose = (id) => {
+    app.set('newsletter.perkIcon', id);
+    app.rerender();
+  };
+  const choice = (id, label, content) =>
+    h('button', { type: 'button', class: 'icon-choice', title: label, 'aria-label': label, 'aria-pressed': String(current === id), onclick: () => choose(id) }, content);
+  const svg = (id) => {
+    const holder = h('span', {});
+    holder.innerHTML = perkIconSvg(id, 'icon'); // static markup from icons.mjs
+    return holder.firstChild;
+  };
+  return h(
+    'div',
+    { class: 'field' },
+    h('span', { class: 'field-label' }, 'Icon in front of each perk'),
+    h(
+      'div',
+      { class: 'icon-picker' },
+      Object.entries(PERK_ICONS).map(([id, icon]) => choice(id, icon.label, svg(id))),
+      choice('none', 'No icon', 'None'),
+      choice('custom', 'Your own image', 'Own image')
+    ),
+    current === 'custom'
+      ? image(app, 'newsletter.perkImage', {
+          label: 'Icon image',
+          help: 'A small square PNG with a transparent background works best.',
+          upload: { maxWidth: 128, maxHeight: 128, format: 'image/png', name: 'perk-icon' },
+        })
+      : null,
+    current === 'none'
+      ? null
+      : h(
+          'div',
+          { class: 'grid-2' },
+          current === 'custom' ? h('div', {}) : select(app, 'newsletter.perkIconColor', { label: 'Icon colour', options: PERK_ICON_COLORS }),
+          range(app, 'newsletter.perkIconSize', { label: 'Icon size', min: 8, max: 40, unit: 'px' })
+        )
+  );
+}
+
+function followCard(app) {
+  return card(
+    'Follow socials',
+    'Your social icons under a heading. Choose which links appear here under Social links.',
+    h('div', { class: 'grid-2' }, select(app, 'socialBand.layout', { label: 'Position', options: BAND_LAYOUTS }), select(app, 'socialBand.show', { label: 'Show on', options: BAND_PLACES })),
+    text(app, 'socialBand.heading', { label: 'Heading', maxlength: 80, placeholder: 'Leave empty for icons only' }),
+    h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: () => app.goto('socials') }, icon('socials'), 'Edit the links')
+  );
+}
+
 function home(app) {
   const showSuccess = h(
     'button',
@@ -148,7 +208,7 @@ function home(app) {
   );
 
   return [
-    head('Home page', 'The home page is the sign-up page: logo, a short about text, the newsletter hook and the email form.'),
+    head('Home page', 'The home page is the sign-up page: logo, a short about text, the newsletter hook and the email form. Tip: click any text in the preview to jump to its field.'),
     card(
       'Logo',
       null,
@@ -179,7 +239,7 @@ function home(app) {
       text(app, 'newsletter.heading', { label: 'Hook (main heading)', maxlength: 140, counter: 80 }),
       text(app, 'newsletter.body', { label: 'Extra text under the hook (optional)', multiline: true, rows: 2, maxlength: 600 }),
       toggle(app, 'newsletter.showPerks', { label: 'Show what subscribers get', rerender: true }),
-      app.get('newsletter.showPerks') ? stringList(app, 'newsletter.perks', { label: 'Subscriber perks', max: LIMITS.perks, placeholder: 'Exclusive screenshots' }) : null,
+      app.get('newsletter.showPerks') ? [stringList(app, 'newsletter.perks', { label: 'Subscriber perks', max: LIMITS.perks, placeholder: 'Exclusive screenshots' }), perkIconPicker(app)] : null,
       h(
         'div',
         { class: 'grid-3' },
@@ -193,6 +253,7 @@ function home(app) {
         help: 'Say how often you email and that people can unsubscribe at any time.',
       })
     ),
+    followCard(app),
     card(
       'Consent',
       'Double opt-in plus this statement is the common standard for newsletter forms. Turn on the checkbox if you prefer explicit, ticked consent.',
@@ -594,6 +655,70 @@ function appearance(app) {
   ];
 }
 
+// --- text styles -------------------------------------------------------------------------------
+
+const BOLD_AND_CLEAN = { weight: 800, color: 'text', shadow: 'none', crt: false };
+
+function textStyles(app) {
+  const fontOptions = { '': 'Theme default', ...Object.fromEntries(Object.entries(FONTS).map(([id, f]) => [id, f.label])) };
+  const isDefault = (t) => Object.entries(DEFAULT_TEXT_STYLE).every(([k, v]) => t[k] === v);
+  const set = (p, values) => {
+    app.set(p, { ...app.get(p), ...values });
+    app.rerender();
+  };
+
+  const blocks = Object.entries(TEXT_ROLES).map(([id, role]) => {
+    const p = `textStyles.${id}`;
+    const t = app.get(p);
+    const block = h(
+      'details',
+      { class: 'repeat-item', open: app.isOpen(p) },
+      h('summary', { class: 'repeat-summary' }, h('span', { class: 'repeat-title' }, `${role.label}${isDefault(t) ? '' : ' · customised'}`)),
+      h(
+        'div',
+        { class: 'repeat-body' },
+        h(
+          'div',
+          { class: 'grid-2' },
+          select(app, `${p}.font`, { label: 'Font', options: fontOptions }),
+          range(app, `${p}.weight`, { label: 'Weight (boldness)', min: 0, max: 900, step: 100, format: (v) => (v ? String(v) : 'Default') })
+        ),
+        h(
+          'div',
+          { class: 'grid-2' },
+          range(app, `${p}.size`, { label: 'Size', min: 50, max: 250, step: 5, unit: '%' }),
+          range(app, `${p}.tracking`, { label: 'Letter spacing', min: -10, max: 40, format: (v) => (v ? `${(v / 100).toFixed(2)} em` : 'Default') })
+        ),
+        h('div', { class: 'grid-2' }, select(app, `${p}.case`, { label: 'Letters', options: TEXT_CASES }), select(app, `${p}.color`, { label: 'Colour', options: TEXT_COLORS, rerender: true })),
+        t.color === 'custom' ? color(app, `${p}.customColor`, { label: 'Custom colour' }) : null,
+        h(
+          'div',
+          { class: 'grid-2' },
+          select(app, `${p}.shadow`, { label: 'Shadow', options: TEXT_SHADOWS, help: 'A shadow replaces the CRT colour split on this text.' }),
+          toggle(app, `${p}.crt`, { label: 'CRT colour split', help: 'Only when the CRT effect is on (Effects).' })
+        ),
+        h(
+          'div',
+          { class: 'style-actions' },
+          h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: () => set(p, BOLD_AND_CLEAN) }, 'Bold & clean'),
+          h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: () => set(p, DEFAULT_TEXT_STYLE) }, icon('refresh'), 'Reset')
+        )
+      )
+    );
+    block.addEventListener('toggle', () => app.setOpen(p, block.open));
+    return block;
+  });
+
+  return [
+    head('Text styles', 'Fine-tune single texts on top of the theme: font, boldness, size, colour and effects.'),
+    card(
+      null,
+      '"Bold & clean" gives a heavy, crisp heading in the text colour without the CRT colour split. The CRT scanlines lie over the whole page; turn them down under Effects for an even cleaner look.',
+      h('div', { class: 'repeater' }, blocks)
+    ),
+  ];
+}
+
 // --- socials, privacy, seo, history -----------------------------------------------------------
 
 const PLATFORM_OPTIONS = Object.fromEntries(Object.entries(SOCIAL_GROUPS).map(([group, ids]) => [group, Object.fromEntries(ids.map((id) => [id, SOCIAL_PLATFORMS[id]]))]));
@@ -612,7 +737,8 @@ function socials(app) {
   const list = app.get('socials') ?? [];
   const filled = list.filter((s) => s.url).length;
   return [
-    head('Social links', 'Your links, shown as icons in the top menu, in the "Follow" band at the bottom of every page and in the press kit.'),
+    head('Social links', 'Your links, shown as icons in the top menu, in the "Follow" block and in the press kit.'),
+    followCard(app),
     card(
       'Links',
       filled
@@ -639,14 +765,9 @@ function socials(app) {
             mono: true,
             rerender: true,
           }),
-          h('div', { class: 'grid-2' }, toggle(app, `${p}.inMenu`, { label: 'In the top menu' }), toggle(app, `${p}.inBand`, { label: 'In the bottom band' })),
+          h('div', { class: 'grid-2' }, toggle(app, `${p}.inMenu`, { label: 'In the top menu' }), toggle(app, `${p}.inBand`, { label: 'In the "Follow" block' })),
         ],
       })
-    ),
-    card(
-      'Bottom band',
-      'A "Follow us" strip with large icons above the footer.',
-      h('div', { class: 'grid-2' }, select(app, 'socialBand.show', { label: 'Show on', options: BAND_PLACES }), text(app, 'socialBand.heading', { label: 'Heading', maxlength: 80 }))
     ),
     note('Mastodon verification works: links use rel="me".', 'info'),
   ];
@@ -794,6 +915,7 @@ export const PANELS = [
   { id: 'press', label: 'Press kit', icon: 'press', render: press, page: 'press' },
   { id: 'brand', label: 'Site & brand', icon: 'about', render: brand },
   { id: 'appearance', label: 'Appearance', icon: 'appearance', render: appearance, page: 'home' },
+  { id: 'text', label: 'Text styles', icon: 'type', render: textStyles, page: 'home' },
   { id: 'effects', label: 'Effects', icon: 'effects', render: effects, page: 'home' },
   { id: 'socials', label: 'Social links', icon: 'socials', render: socials, page: 'home' },
   { id: 'privacy', label: 'Privacy & legal', icon: 'privacy', render: privacy, page: 'privacy' },

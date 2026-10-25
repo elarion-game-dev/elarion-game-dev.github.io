@@ -3,13 +3,27 @@
 // strings are length-limited, enums/colours/URLs are validated, so a broken or tampered
 // site.json can never produce unsafe output.
 
-import { BRAND_ICONS } from './icons.mjs';
+import { BRAND_ICONS, PERK_ICONS } from './icons.mjs';
 import { PROVIDER_IDS } from './providers.mjs';
-import { BUTTON_STYLES, CARD_STYLES, FONT_IDS, FORM_LAYOUTS, HEADING_CASES, HERO_BACKGROUNDS, PRESETS } from './themes.mjs';
+import {
+  BUTTON_STYLES,
+  CARD_STYLES,
+  DEFAULT_TEXT_STYLE,
+  FONT_IDS,
+  FORM_LAYOUTS,
+  HEADING_CASES,
+  HERO_BACKGROUNDS,
+  PRESETS,
+  TEXT_CASES,
+  TEXT_COLORS,
+  TEXT_ROLES,
+  TEXT_SHADOWS,
+} from './themes.mjs';
 import { clamp, isEmail, isHexColor, isPlainObject, safeAssetPath, safeUrl, slugify } from './util.mjs';
 
 // 3: social band and effects became top-level settings; social links can be saved without a URL.
-export const SCHEMA_VERSION = 3;
+// 4: band layout, perk icon and text styles. All new keys default safely, so no migration is needed.
+export const SCHEMA_VERSION = 4;
 export const NAV_IDS = ['home', 'news', 'press'];
 export const NAV_LABELS = { home: 'Home', news: 'News', press: 'Press kit' };
 export const HOME_LAYOUTS = { 'about-first': 'About text first, then sign-up', 'signup-first': 'Sign-up first, then about text' };
@@ -39,6 +53,9 @@ export const SOCIAL_GROUPS = {
 export const SOCIAL_PLATFORMS = Object.fromEntries(Object.values(SOCIAL_GROUPS).flat().map((id) => [id, BRAND_ICONS[id]?.title ?? EXTRA_PLATFORMS[id]]));
 export const NAV_STYLES = { 'bar-stepped': 'Hanging bar, pixel corners', 'bar-rounded': 'Hanging bar, rounded corners', classic: 'Full-width header' };
 export const BAND_PLACES = { all: 'Every page', home: 'Home page only', off: 'Nowhere' };
+export const BAND_LAYOUTS = { inline: 'Under the sign-up form', strip: 'Strip above the footer' };
+export const PERK_ICON_CHOICES = [...Object.keys(PERK_ICONS), 'none', 'custom'];
+export const PERK_ICON_COLORS = { accent: 'Accent', accent2: 'Second accent', text: 'Text colour', muted: 'Secondary text' };
 export const HALFTONE_PLACES = { home: 'Home page background', all: 'Every page' };
 export const HALFTONE_COLORS = { accent2: 'Second accent', accent: 'Accent', text: 'Text colour' };
 export const LIMITS = { posts: 100, perks: 6, socials: 24, facts: 20, features: 20, images: 40, logos: 12, videos: 12, quotes: 20, team: 30 };
@@ -73,7 +90,7 @@ export const DEFAULT_SETTINGS = {
       body: 'Elarion is an indie game developer building a new game in the open. Follow along from the first sketches to launch day, and help shape the game in early playtests.',
     },
   },
-  socialBand: { show: 'all', heading: 'Follow Elarion' },
+  socialBand: { show: 'all', layout: 'inline', heading: 'Follow Elarion' },
   footer: { note: 'No cookies, no tracking.' },
   effects: {
     crt: { enabled: true, scanlines: 22, flicker: true, rgbText: true, vignette: true },
@@ -89,6 +106,10 @@ export const DEFAULT_SETTINGS = {
     body: '',
     showPerks: true,
     perks: ['Exclusive screenshots', 'Early builds', 'Concept art', 'Developer insights'],
+    perkIcon: 'sparkle',
+    perkImage: '',
+    perkIconColor: 'accent',
+    perkIconSize: 14,
     emailLabel: 'Email',
     placeholder: 'you@example.com',
     buttonLabel: 'Subscribe',
@@ -127,6 +148,7 @@ export const DEFAULT_SETTINGS = {
     logo: '',
     favicon: '',
   },
+  textStyles: Object.fromEntries(Object.keys(TEXT_ROLES).map((id) => [id, { ...DEFAULT_TEXT_STYLE }])),
   news: {
     heading: 'News',
     intro: 'Development updates, new builds and behind-the-scenes notes.',
@@ -317,6 +339,7 @@ export function normalizeSettings(input) {
     },
     socialBand: {
       show: oneOf(band.show, Object.keys(BAND_PLACES), d.socialBand.show),
+      layout: oneOf(band.layout, Object.keys(BAND_LAYOUTS), d.socialBand.layout),
       heading: line(band.heading, 80, d.socialBand.heading),
     },
     footer: { note: line(obj(raw.footer).note, 120, d.footer.note) },
@@ -353,6 +376,10 @@ export function normalizeSettings(input) {
       body: str(nl.body, 600, d.newsletter.body),
       showPerks: bool(nl.showPerks, d.newsletter.showPerks),
       perks: list(nl.perks, LIMITS.perks, d.newsletter.perks).map((p) => line(p, 60, '')).filter(Boolean),
+      perkIcon: oneOf(nl.perkIcon, PERK_ICON_CHOICES, d.newsletter.perkIcon),
+      perkImage: image(nl.perkImage),
+      perkIconColor: oneOf(nl.perkIconColor, Object.keys(PERK_ICON_COLORS), d.newsletter.perkIconColor),
+      perkIconSize: num(nl.perkIconSize, 8, 40, d.newsletter.perkIconSize),
       emailLabel: required(nl.emailLabel, 60, d.newsletter.emailLabel),
       placeholder: line(nl.placeholder, 60, d.newsletter.placeholder),
       buttonLabel: required(nl.buttonLabel, 40, d.newsletter.buttonLabel),
@@ -391,6 +418,26 @@ export function normalizeSettings(input) {
       logo: image(theme.logo),
       favicon: image(theme.favicon),
     },
+    textStyles: Object.fromEntries(
+      Object.keys(TEXT_ROLES).map((id) => {
+        const t = obj(obj(raw.textStyles)[id]);
+        const dt = DEFAULT_TEXT_STYLE;
+        return [
+          id,
+          {
+            font: t.font === '' ? '' : oneOf(t.font, FONT_IDS, dt.font),
+            weight: t.weight === 0 ? 0 : Math.round(num(t.weight, 100, 900, dt.weight) / 100) * 100,
+            size: num(t.size, 50, 250, dt.size),
+            case: oneOf(t.case, Object.keys(TEXT_CASES), dt.case),
+            color: oneOf(t.color, Object.keys(TEXT_COLORS), dt.color),
+            customColor: color(t.customColor, dt.customColor),
+            tracking: num(t.tracking, -10, 40, dt.tracking),
+            shadow: oneOf(t.shadow, Object.keys(TEXT_SHADOWS), dt.shadow),
+            crt: bool(t.crt, dt.crt),
+          },
+        ];
+      })
+    ),
     news: {
       heading: required(news.heading, 80, d.news.heading),
       intro: str(news.intro, 500, d.news.intro),

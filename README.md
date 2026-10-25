@@ -6,9 +6,10 @@ Elarion's game dev site: a newsletter sign-up home page, news and a press kit. L
 - **News** (`/news/`): posts, one page per post (`/news/<address>/`) and an RSS feed (`/news/feed.xml`).
 - **Press kit** (`/press/`): factsheet, description, history, features, screenshots, logos, videos, quotes, team and contact. Every section can be switched off, renamed and reordered.
 - **Menu**: a bar hanging from the top edge with star dividers and social icons; a full-screen menu behind a button on phones (works without JavaScript).
-- **Social links**: ~30 game-dev platforms (stores, Discord, video, social, crowdfunding). Each link can show in the top menu, in the "Follow" band above the footer, or both.
+- **Social links**: ~30 game-dev platforms (stores, Discord, video, social, crowdfunding). Each link can show in the top menu, in the "Follow" block (right under the sign-up form, or as a strip above the footer), or both.
 - **Effects**: a CRT screen (scanlines, phosphor stripes, flicker, red/blue text split) and comic halftone dots that drift with the mouse. Both have still versions for visitors who prefer reduced motion.
-- **Admin** (`/admin/`): edits every text, image, page, menu item, social link, effect and visual setting, with a live preview of every page (including ones switched off).
+- **Theme**: 13 colour presets (dark and light, including white & orange), fonts, buttons, backgrounds, and per-text styles (font, weight, size, colour, letter spacing, shadow, CRT split) for headings, perks and the menu. The perk icon can be any of ~17 icons or an uploaded image.
+- **Admin** (`/admin/`): edits every text, image, page, menu item, social link, effect and visual setting, with a live preview of every page (including ones switched off). Click a text in the preview to jump to its field.
 
 The sign-up form posts straight to your email provider (Kit, MailerLite, Buttondown or any HTML-form provider). Subscriber emails never touch this site or this repository. There's no server and no npm dependencies: plain HTML/CSS/JS built by a small Node script and deployed by GitHub Actions.
 

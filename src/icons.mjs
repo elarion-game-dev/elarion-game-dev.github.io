@@ -34,3 +34,31 @@ export const BRAND_ICONS = {
   substack: { title: "Substack", path: "M22.539 8.242H1.46V5.406h21.08v2.836zM1.46 10.812V24L12 18.11 22.54 24V10.812H1.46zM22.54 0H1.46v2.836h21.08V0z" },
   linktree: { title: "Linktree", path: "m13.73635 5.85251 4.00467-4.11665 2.3248 2.3808-4.20064 4.00466h5.9085v3.30473h-5.9365l4.22865 4.10766-2.3248 2.3338L12.0005 12.099l-5.74052 5.76852-2.3248-2.3248 4.22864-4.10766h-5.9375V8.12132h5.9085L3.93417 4.11666l2.3248-2.3808 4.00468 4.11665V0h3.4727zm-3.4727 10.30614h3.4727V24h-3.4727z" },
 };
+
+// Icons for the subscriber perks list. `fill` is a filled path, `stroke` is outline markup. 24x24 viewBox.
+export const PERK_ICONS = {
+  sparkle: { label: 'Four-point star', fill: 'M12 1.5c.6 4.9 2.6 8.9 10.5 10.5-7.9 1.6-9.9 5.6-10.5 10.5C11.4 17.6 9.4 13.6 1.5 12 9.4 10.4 11.4 6.4 12 1.5z' },
+  star: { label: 'Star', fill: 'M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z' },
+  check: { label: 'Tick', stroke: '<path d="m5 12.5 4.5 4.5L19 7.5"/>' },
+  checkCircle: { label: 'Tick in a circle', stroke: '<circle cx="12" cy="12" r="9"/><path d="m8 12.5 3 3 5-6"/>' },
+  heart: { label: 'Heart', fill: 'M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.6 4.5c2.1 0 3.6 1.1 5.4 3.1 1.8-2 3.3-3.1 5.4-3.1 3.6 0 5.7 3.8 4.2 7.2C19.5 16.4 12 21 12 21z' },
+  bolt: { label: 'Lightning', fill: 'M13.5 2 4.5 13.5h6L9.5 22l9-11.5h-6z' },
+  flame: { label: 'Flame', fill: 'M12 2c.8 3.6 5.5 6.2 5.5 11.3A5.6 5.6 0 0 1 12 19a5.6 5.6 0 0 1-5.5-5.7c0-2.4 1.2-4.3 2.5-5.6.2 1.8 1 3 2.3 3.6C11 8.8 11.2 5.3 12 2z' },
+  gem: { label: 'Gem', fill: 'M12 2.5 20 12l-8 9.5L4 12z' },
+  crown: { label: 'Crown', fill: 'M3 7.5l4.5 4 4.5-7 4.5 7 4.5-4-2 11H5z' },
+  sword: { label: 'Sword', stroke: '<path d="M20 4v5L9.5 19.5l-5-5L15 4z"/><path d="m3 21 3.5-3.5M6.5 13.5l4 4"/>' },
+  shield: { label: 'Shield', stroke: '<path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5V6L12 3z"/>' },
+  gamepad: { label: 'Gamepad', stroke: '<rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M7 11v3M5.5 12.5h3"/><circle cx="15.5" cy="11.5" r=".6"/><circle cx="17.5" cy="14" r=".6"/>' },
+  gift: { label: 'Gift', stroke: '<rect x="3.5" y="8" width="17" height="4" rx="1"/><path d="M5 12v8.5h14V12M12 8v12.5M12 8c-1.5-3.5-5.5-4-5.5-1.5S10 8 12 8zm0 0c1.5-3.5 5.5-4 5.5-1.5S14 8 12 8z"/>' },
+  mail: { label: 'Envelope', stroke: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>' },
+  chevron: { label: 'Arrow', stroke: '<path d="m9 5 7 7-7 7"/>' },
+  plus: { label: 'Plus', stroke: '<path d="M12 5v14M5 12h14"/>' },
+  dot: { label: 'Dot', fill: 'M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10z' },
+};
+
+export function perkIconSvg(id, cls = 'perk-icon') {
+  const icon = PERK_ICONS[id] ?? PERK_ICONS.sparkle;
+  return icon.fill
+    ? `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="${icon.fill}"/></svg>`
+    : `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${icon.stroke}</svg>`;
+}

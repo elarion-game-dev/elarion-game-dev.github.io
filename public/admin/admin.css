@@ -364,6 +364,11 @@ textarea.input {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   height: 100dvh;
+  overflow: hidden;
+}
+
+body:has(.shell) {
+  overflow: hidden;
 }
 
 .topbar {
@@ -495,6 +500,7 @@ textarea.input {
 }
 
 .sidebar {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -534,9 +540,23 @@ textarea.input {
   color: var(--accent);
 }
 
+/* position: relative keeps absolutely positioned children (hidden switch inputs, file inputs) inside the
+   scroll box; without it they stretch the page itself and it scrolls past the workspace. */
 .editor {
+  position: relative;
   overflow-y: auto;
   outline: none;
+}
+
+.field.flash,
+.input.flash {
+  animation: flash 1.4s ease-out;
+}
+
+@keyframes flash {
+  from {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
 }
 
 .panel {
@@ -642,6 +662,7 @@ textarea.input {
 }
 
 .switch {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.7rem;
@@ -1042,6 +1063,47 @@ textarea.input {
 .preset-fonts {
   color: var(--muted);
   font-size: 0.75rem;
+}
+
+.icon-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.icon-choice {
+  display: grid;
+  place-items: center;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.icon-choice svg {
+  width: 18px;
+  height: 18px;
+}
+
+.icon-choice:hover {
+  border-color: var(--muted);
+}
+
+.icon-choice[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.style-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .contrast {

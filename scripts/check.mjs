@@ -212,8 +212,8 @@ await test('Menu shows the pages, star dividers and only socials that have a lin
   assert.match(nav, /href="https:\/\/discord\.gg\/abc"/);
   assert.ok(!nav.includes('steampowered'), 'steam is not set to show in the menu');
   assert.ok(!nav.includes('is-placeholder'), 'links without a URL are not on the live site');
-  assert.match(live, /class="social-band"[\s\S]*steampowered/, 'band shows its own selection');
-  assert.ok(!/class="social-band"[\s\S]*discord\.gg/.test(live), 'discord is not set to show in the band');
+  assert.match(live, /class="social-band[^"]*"[\s\S]*steampowered/, 'band shows its own selection');
+  assert.ok(!/class="social-band[^"]*"[\s\S]*discord\.gg/.test(live), 'discord is not set to show in the band');
   const preview = renderPage(n, 'home', { preview: true });
   assert.match(preview, /class="is-placeholder"/, 'the preview shows unfilled links faded');
 });
@@ -232,10 +232,38 @@ await test('Social band follows its placement setting', () => {
     s.socialBand.show = show;
     return renderSite(normalizeSettings(s), { version: 'v' });
   };
-  assert.ok(withLink('all')['press/index.html'].includes('class="social-band"'));
-  assert.ok(!withLink('home')['press/index.html'].includes('class="social-band"'));
-  assert.ok(withLink('home')['index.html'].includes('class="social-band"'));
-  assert.ok(!withLink('off')['index.html'].includes('class="social-band"'));
+  assert.ok(withLink('all')['press/index.html'].match(/class="[^"]*social-band/));
+  assert.ok(!withLink('home')['press/index.html'].match(/class="[^"]*social-band/));
+  assert.ok(withLink('home')['index.html'].match(/class="[^"]*social-band/));
+  assert.ok(!withLink('off')['index.html'].match(/class="[^"]*social-band/));
+});
+
+await test('Inline "Follow" block sits right after the sign-up form; the strip sits above the footer', () => {
+  const s = structuredClone(DEFAULT_SETTINGS);
+  s.socials = [{ platform: 'discord', url: 'https://discord.gg/abc', label: '', inMenu: true, inBand: true }];
+  const inline = renderSite(normalizeSettings(s), { version: 'v' })['index.html'];
+  assert.match(inline, /<\/section>\s*<section class="home-block social-band social-inline"/);
+  assert.equal(inline.match(/class="[^"]*social-band/g).length, 1, 'shown once');
+  s.socialBand.layout = 'strip';
+  const strip = renderSite(normalizeSettings(s), { version: 'v' })['index.html'];
+  assert.ok(!strip.includes('social-inline') && strip.includes('<section class="social-band"'));
+});
+
+await test('Perk icon, text styles and click-to-edit markers', () => {
+  const s = structuredClone(DEFAULT_SETTINGS);
+  s.newsletter.perkIcon = 'heart';
+  s.newsletter.perkIconColor = '"><script>';
+  s.textStyles.hook = { ...s.textStyles.hook, weight: 800, size: 130, color: 'custom', customColor: '#ffffff', crt: false, font: '"><x' };
+  const n = normalizeSettings(s);
+  assert.equal(n.newsletter.perkIconColor, 'accent');
+  assert.equal(n.textStyles.hook.font, '');
+  const site = renderSite(n, { version: 'v' });
+  assert.ok(site['index.html'].includes('class="perk-icon"') && !site['index.html'].includes('data-edit'));
+  assert.match(site['assets/css/theme.css'], /:root \.signup-hook \{[^}]*font-weight: 800;[^}]*--k: 1\.30;[^}]*color: #ffffff;[^}]*animation: none !important;/);
+  assert.ok(renderPage(n, 'home', { preview: true }).includes('data-edit="newsletter.heading"'));
+  n.newsletter.perkIcon = 'custom';
+  n.newsletter.perkImage = '/assets/uploads/perk.png';
+  assert.ok(renderSite(n, { version: 'v' })['index.html'].includes('<img class="perk-icon perk-image" src="/assets/uploads/perk.png"'));
 });
 
 await test('CRT and halftone follow the effect settings', () => {
@@ -261,7 +289,7 @@ await test('Settings from before version 3 keep their band heading and get ready
   old.home.socials = { enabled: true, heading: 'Follow me on socials' };
   old.socials = [];
   const s = normalizeSettings(old);
-  assert.deepEqual(s.socialBand, { show: 'all', heading: 'Follow me on socials' });
+  assert.deepEqual(s.socialBand, { show: 'all', layout: 'inline', heading: 'Follow me on socials' });
   assert.equal(s.socials.length, DEFAULT_SETTINGS.socials.length);
   assert.equal(normalizeSettings({ ...s, socials: [] }).socials.length, 0, 'an empty list saved by version 3 stays empty');
 });

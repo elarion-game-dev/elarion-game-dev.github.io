@@ -14,6 +14,7 @@ export const ICONS = {
   privacy: '<path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5V6L12 3z"/>',
   seo: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
   history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>',
+  type: '<path d="M5 7V4.5h14V7M12 4.5v15M9 19.5h6"/>',
   effects: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M3 8h18M3 12h18M8 21h8"/>',
   up: '<path d="m6 15 6-6 6 6"/>',
   down: '<path d="m6 9 6 6 6-6"/>',
@@ -124,7 +125,7 @@ function wrap(label, control, { help, id, inline = false } = {}) {
 export function text(app, path, { label, help, placeholder, maxlength, type = 'text', multiline = false, rows = 3, validate, counter, rerender, mono, onInput } = {}) {
   const id = nextId();
   const value = app.get(path) ?? '';
-  const attrs = { id, placeholder, maxlength, class: `input${mono ? ' mono' : ''}`, 'aria-describedby': help ? `${id}-help` : null, spellcheck: type === 'text' && !mono ? 'true' : 'false' };
+  const attrs = { id, placeholder, maxlength, class: `input${mono ? ' mono' : ''}`, 'aria-describedby': help ? `${id}-help` : null, spellcheck: type === 'text' && !mono ? 'true' : 'false', dataset: { path } };
   const input = multiline ? h('textarea', { ...attrs, rows, value }) : h('input', { ...attrs, type, value, autocomplete: 'off' });
   const count = counter ? h('span', { class: 'counter' }) : null;
   const el = wrap(label, counter ? h('div', { class: 'with-counter' }, input, count) : input, { help, id });
@@ -183,11 +184,12 @@ export function select(app, path, { label, help, options, rerender, onChange } =
   return wrap(label, input, { help, id });
 }
 
-export function range(app, path, { label, help, min, max, step = 1, unit = '' } = {}) {
+/** format(value) can replace the shown value, e.g. "Default" for 0. */
+export function range(app, path, { label, help, min, max, step = 1, unit = '', format } = {}) {
   const id = nextId();
   const output = h('output', { class: 'range-value', for: id });
   const input = h('input', { type: 'range', id, min, max, step, value: app.get(path), class: 'range' });
-  const show = () => (output.textContent = `${input.value}${unit}`);
+  const show = () => (output.textContent = format?.(Number(input.value)) ?? `${input.value}${unit}`);
   input.addEventListener('input', () => {
     app.set(path, Number(input.value));
     show();
@@ -253,7 +255,7 @@ export function stringList(app, path, { label, help, max = 6, placeholder } = {}
     items.length < max
       ? h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: () => (app.set(path, [...items, '']), app.rerender()) }, icon('plus'), 'Add')
       : null;
-  return h('div', { class: 'field' }, h('span', { class: 'field-label' }, label), h('div', { class: 'list' }, rows), add, help ? h('p', { class: 'field-help' }, help) : null);
+  return h('div', { class: 'field', dataset: { path } }, h('span', { class: 'field-label' }, label), h('div', { class: 'list' }, rows), add, help ? h('p', { class: 'field-help' }, help) : null);
 }
 
 function rowButtons(app, path, index, length, { removable = true } = {}) {

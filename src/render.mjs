@@ -1,7 +1,7 @@
 // Renders every public page from the settings object. Used by the build (Node) and by the
 // admin's live preview (browser), so what you see in the preview is exactly what gets published.
 
-import { BRAND_ICONS } from './icons.mjs';
+import { BRAND_ICONS, perkIconSvg } from './icons.mjs';
 import { markdown } from './markdown.mjs';
 import { resolveProvider } from './providers.mjs';
 import { NAV_IDS } from './settings.mjs';
@@ -37,6 +37,9 @@ function brandIcon(platform) {
   if (brand) return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="${brand.path}"/></svg>`;
   return icon(STROKE[platform] ? platform : 'website');
 }
+
+/** In the admin preview, marks a text so clicking it opens its field in the editor. */
+const edit = (ctx, path) => (ctx.preview ? ` data-edit="${path}" title="Click to edit"` : '');
 
 export function faviconSvg(accent) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="${accent}" d="${SIGIL_PATH}"/></svg>\n`;
@@ -208,15 +211,26 @@ function header(settings, ctx, info) {
 </header>`;
 }
 
-/** "Follow us" band at the bottom of the page. */
-function socialBand(settings, ctx, info) {
+/**
+ * "Follow us" band. With the inline layout it sits right under the sign-up form on the home page
+ * (see homePage) and plainly at the end of other pages; with the strip layout it is a band above the footer.
+ */
+function socialBand(settings, ctx, info, { inHome = false } = {}) {
   const band = settings.socialBand;
   if (band.show === 'off' || (band.show === 'home' && info.id !== 'home')) return '';
+  const inline = band.layout === 'inline';
+  if (info.id === 'home' && inline !== inHome) return '';
   const links = socialLinks(settings, ctx, 'social-tiles', 'band');
   if (!links) return '';
-  return `<section class="social-band"${band.heading ? ' aria-labelledby="social-title"' : ' aria-label="Social links"'}>
+  const label = band.heading ? ' aria-labelledby="social-title"' : ' aria-label="Social links"';
+  const heading = band.heading ? `<h2 id="social-title"${edit(ctx, 'socialBand.heading')}>${esc(band.heading)}</h2>` : '';
+  if (inHome) return `<section class="home-block social-band social-inline"${label}>
+      ${heading}
+      ${links}
+    </section>`;
+  return `<section class="social-band${inline ? ' social-plain' : ''}"${label}>
   <div class="container">
-    ${band.heading ? `<h2 id="social-title">${esc(band.heading)}</h2>` : ''}
+    ${heading}
     ${links}
   </div>
 </section>`;
@@ -233,7 +247,7 @@ function footer(settings, ctx) {
   <div class="container footer-inner">
     <p class="copyright">© ${ctx.year} ${esc(settings.site.copyrightName || settings.site.name)}</p>
     <nav class="footer-nav" aria-label="Footer">${links.join('')}</nav>
-    ${settings.footer.note ? `<p class="footer-note">${esc(settings.footer.note)}</p>` : ''}
+    ${settings.footer.note ? `<p class="footer-note"${edit(ctx, 'footer.note')}>${esc(settings.footer.note)}</p>` : ''}
   </div>
 </footer>`;
 }
@@ -307,10 +321,18 @@ function consentHtml(nl) {
   return text.includes('{privacy}') ? text.replace('{privacy}', link) : `${text} (${link})`;
 }
 
-function perks(settings) {
+function perkIcon(settings, ctx) {
+  const nl = settings.newsletter;
+  if (nl.perkIcon === 'none') return '';
+  if (nl.perkIcon === 'custom') return nl.perkImage ? `<img class="perk-icon perk-image" src="${esc(ctx.img(nl.perkImage))}" alt="">` : '';
+  return perkIconSvg(nl.perkIcon);
+}
+
+function perks(settings, ctx) {
   const nl = settings.newsletter;
   if (!nl.showPerks || !nl.perks.length) return '';
-  return `<ul class="perks" aria-label="What subscribers get">${nl.perks.map((p) => `<li>${sigil('sigil perk-icon')}<span>${esc(p)}</span></li>`).join('')}</ul>`;
+  const mark = perkIcon(settings, ctx);
+  return `<ul class="perks" aria-label="What subscribers get"${edit(ctx, 'newsletter.perks')}>${nl.perks.map((p) => `<li>${mark}<span>${esc(p)}</span></li>`).join('')}</ul>`;
 }
 
 function wishlist(settings, ctx, cls = '') {
@@ -319,7 +341,7 @@ function wishlist(settings, ctx, cls = '') {
   const url = w.url || (ctx.preview ? '#' : '');
   if (!w.enabled || !url) return '';
   return `<div class="wishlist${cls ? ` ${cls}` : ''}">
-        ${w.text ? `<p>${esc(w.text)}</p>` : ''}
+        ${w.text ? `<p${edit(ctx, 'wishlist.text')}>${esc(w.text)}</p>` : ''}
         <a class="btn btn-steam" href="${esc(url)}" target="_blank" rel="noopener">${brandIcon('steam')}<span>${esc(w.buttonLabel)}</span></a>
       </div>`;
 }
@@ -329,7 +351,7 @@ function signup(settings, ctx) {
   const nl = settings.newsletter;
   const p = ctx.provider;
   const showSuccess = ctx.preview && ctx.previewSuccess;
-  if (!p.ready && !showSuccess) return `<div class="subscribe-closed">${icon('hourglass')}<p>${esc(nl.closedMessage)}</p></div>`;
+  if (!p.ready && !showSuccess) return `<div class="subscribe-closed">${icon('hourglass')}<p${edit(ctx, 'newsletter.closedMessage')}>${esc(nl.closedMessage)}</p></div>`;
 
   const hidden = p.ready
     ? Object.entries(p.hidden)
@@ -348,7 +370,7 @@ function signup(settings, ctx) {
         <label for="subscribe-website">Leave this field empty</label>
         <input id="subscribe-website" type="text" tabindex="-1" autocomplete="off" data-honeypot>
       </div>
-      ${nl.trustText ? `<p class="trust">${icon('lock')}<span>${esc(nl.trustText)}</span></p>` : ''}
+      ${nl.trustText ? `<p class="trust"${edit(ctx, 'newsletter.trustText')}>${icon('lock')}<span>${esc(nl.trustText)}</span></p>` : ''}
       ${
         nl.requireConsent
           ? `<label class="consent"><input type="checkbox" required data-consent><span>${consentHtml(nl)}</span></label>`
@@ -362,8 +384,8 @@ function signup(settings, ctx) {
     ${form}
     <div class="subscribe-success" data-success${showSuccess ? '' : ' hidden'} tabindex="-1">
       <div class="success-icon">${icon('mail')}</div>
-      <h3>${esc(nl.successTitle)}</h3>
-      <div class="prose">${markdown(nl.successBody)}</div>
+      <h3${edit(ctx, 'newsletter.successTitle')}>${esc(nl.successTitle)}</h3>
+      <div class="prose"${edit(ctx, 'newsletter.successBody')}>${markdown(nl.successBody)}</div>
       ${wishlist(settings, ctx)}
     </div>
   </div>`;
@@ -375,8 +397,8 @@ function signupBox(settings, ctx) {
   return `<section class="signup-band" aria-labelledby="signup-box-title">
   <div class="container narrow">
     <div class="signup-box card" id="subscribe">
-      <h2 id="signup-box-title" class="signup-hook">${esc(settings.newsletter.heading)}</h2>
-      ${perks(settings)}
+      <h2 id="signup-box-title" class="signup-hook"${edit(ctx, 'newsletter.heading')}>${esc(settings.newsletter.heading)}</h2>
+      ${perks(settings, ctx)}
       ${signup(settings, ctx)}
     </div>
   </div>
@@ -399,19 +421,21 @@ function homePage(settings, ctx) {
   const about =
     h.about.enabled && (h.about.heading || h.about.body)
       ? `<section class="home-block home-about"${h.about.heading ? ' aria-labelledby="about-title"' : ''}>
-      ${h.about.heading ? `<h2 id="about-title">${esc(h.about.heading)}</h2>` : ''}
-      <div class="prose">${markdown(h.about.body)}</div>
+      ${h.about.heading ? `<h2 id="about-title"${edit(ctx, 'home.about.heading')}>${esc(h.about.heading)}</h2>` : ''}
+      <div class="prose"${edit(ctx, 'home.about.body')}>${markdown(h.about.body)}</div>
     </section>`
       : '';
 
   const signupBlock = `<section class="home-block home-signup" id="subscribe" aria-labelledby="signup-title">
-      <h2 id="signup-title" class="signup-hook">${esc(nl.heading)}</h2>
-      ${nl.body ? `<div class="prose signup-body">${markdown(nl.body)}</div>` : ''}
-      ${perks(settings)}
+      <h2 id="signup-title" class="signup-hook"${edit(ctx, 'newsletter.heading')}>${esc(nl.heading)}</h2>
+      ${nl.body ? `<div class="prose signup-body"${edit(ctx, 'newsletter.body')}>${markdown(nl.body)}</div>` : ''}
+      ${perks(settings, ctx)}
       ${signup(settings, ctx)}
     </section>`;
 
-  const blocks = h.layout === 'signup-first' ? [signupBlock, about] : [about, signupBlock];
+  // The inline "Follow" block always comes straight after the sign-up form.
+  const follow = socialBand(settings, ctx, pageInfo(settings, 'home'), { inHome: true });
+  const blocks = h.layout === 'signup-first' ? [signupBlock, follow, about] : [about, signupBlock, follow];
   const dots = settings.effects.halftone.enabled ? halftoneCanvas(settings, 'halftone-hero') : '';
 
   return `<section class="home-hero">
@@ -448,8 +472,8 @@ function newsPage(settings, ctx) {
   return `<section class="page page-list">
   <div class="container">
     <header class="page-head">
-      <h1>${esc(n.heading)}</h1>
-      ${n.intro ? `<div class="prose lead">${markdown(n.intro)}</div>` : ''}
+      <h1${edit(ctx, 'news.heading')}>${esc(n.heading)}</h1>
+      ${n.intro ? `<div class="prose lead"${edit(ctx, 'news.intro')}>${markdown(n.intro)}</div>` : ''}
       <p class="page-head-links"><a class="feed-link" href="/news/feed.xml">${icon('rss')}<span>RSS feed</span></a></p>
     </header>
     ${posts.length ? `<div class="news-grid">${cards}</div>` : `<p class="empty-state">${icon('hourglass')}<span>No news yet. Subscribe to hear first.</span></p>`}
@@ -605,8 +629,8 @@ function pressPage(settings, ctx) {
   return `<section class="page page-press">
   <div class="container">
     <header class="page-head">
-      <h1>${esc(pr.heading)}</h1>
-      ${pr.intro ? `<div class="prose lead">${markdown(pr.intro)}</div>` : ''}
+      <h1${edit(ctx, 'press.heading')}>${esc(pr.heading)}</h1>
+      ${pr.intro ? `<div class="prose lead"${edit(ctx, 'press.intro')}>${markdown(pr.intro)}</div>` : ''}
     </header>
     <div class="press-layout${facts ? ' has-factsheet' : ''}">
       ${facts ? `<aside class="press-facts card" aria-labelledby="press-factsheet-title">\n      ${facts}\n      </aside>` : ''}
@@ -725,8 +749,8 @@ function confirmedPage(settings, ctx) {
   return `<section class="page page-center">
   <div class="container narrow">
     <div class="success-icon success-icon-large">${icon('check')}</div>
-    <h1>${esc(nl.confirmedTitle)}</h1>
-    <div class="prose lead">${markdown(nl.confirmedBody)}</div>
+    <h1${edit(ctx, 'newsletter.confirmedTitle')}>${esc(nl.confirmedTitle)}</h1>
+    <div class="prose lead"${edit(ctx, 'newsletter.confirmedBody')}>${markdown(nl.confirmedBody)}</div>
     ${wishlist(settings, ctx, 'wishlist-large')}
     <p class="actions">
       ${settings.nav.news.enabled ? `<a class="btn btn-ghost" href="/news/">Read the latest news</a>` : ''}
@@ -785,6 +809,9 @@ export function renderPage(settings, pageId, opts = {}) {
   return layout(settings, ctx, info, bodies[info.kind]());
 }
 
+/** Size and colour of the perk icons, for theme.css. */
+export const perkCss = (settings) => ({ size: settings.newsletter.perkIconSize, color: settings.newsletter.perkIconColor });
+
 /** Render every generated file of the site: { "path/in/dist": "contents" }. */
 export function renderSite(settings, opts = {}) {
   const ctx = context(settings, opts);
@@ -794,7 +821,7 @@ export function renderSite(settings, opts = {}) {
   for (const id of pages) files[pageInfo(s, id).file] = renderPage(s, id, opts);
   if (s.nav.news.enabled) files['news/feed.xml'] = rssFeed(s);
 
-  files['assets/css/theme.css'] = themeCss(s.theme, { effects: s.effects });
+  files['assets/css/theme.css'] = themeCss(s.theme, { effects: s.effects, textStyles: s.textStyles, perkIcon: perkCss(s) });
   files['assets/img/favicon.svg'] = faviconSvg(s.theme.colors.accent);
 
   const today = ctx.now.toISOString().slice(0, 10);
