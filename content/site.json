@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 1,
+  "site": {
+    "name": "Elarion",
+    "url": "https://elarion-game-dev.github.io",
+    "language": "en",
+    "contactEmail": "",
+    "copyrightName": "Elarion"
+  },
+  "hero": {
+    "eyebrow": "Indie game developer",
+    "headline": "Physics, chaos and a little bit of magic.",
+    "intro": "I'm Elarion, and I make browser games where things explode, shatter and pile up. Join the newsletter to follow each new game from its first prototype to launch."
+  },
+  "newsletter": {
+    "provider": "none",
+    "kit": {
+      "formId": ""
+    },
+    "mailerlite": {
+      "accountId": "",
+      "formId": ""
+    },
+    "buttondown": {
+      "username": "",
+      "tag": "website"
+    },
+    "custom": {
+      "action": "",
+      "emailField": "email",
+      "providerName": "",
+      "privacyUrl": ""
+    },
+    "heading": "Follow the journey",
+    "body": "Get an email when there's something worth showing: new prototypes, behind-the-scenes notes and early playtest invites.",
+    "perks": [
+      "Early access to playtests",
+      "Behind-the-scenes devlogs",
+      "Launch news before anyone else"
+    ],
+    "emailLabel": "Email address",
+    "placeholder": "you@example.com",
+    "buttonLabel": "Subscribe",
+    "requireConsent": true,
+    "consentText": "I'd like to receive the Elarion newsletter and I've read the {privacy}. I can unsubscribe at any time.",
+    "finePrint": "No spam, ever. You'll confirm your address first, and every email has a one-click unsubscribe link.",
+    "successTitle": "Almost there! Check your inbox.",
+    "successBody": "I've sent you a confirmation link. Click it to finish subscribing. Nothing there after a few minutes? Check your spam folder.",
+    "closedMessage": "The newsletter opens very soon. Check back in a day or two!",
+    "confirmedTitle": "You're in. Welcome aboard!",
+    "confirmedBody": "Thanks for confirming your email. The next devlog will land straight in your inbox. Until then, why not play one of the prototypes?"
+  },
+  "theme": {
+    "preset": "arcane",
+    "colors": {
+      "bg": "#0b0d19",
+      "surface": "#141932",
+      "border": "#2a3157",
+      "text": "#ecebf7",
+      "muted": "#a8abc9",
+      "accent": "#f2b35b",
+      "onAccent": "#1d1405",
+      "accent2": "#9d8cff"
+    },
+    "headingFont": "cinzel",
+    "bodyFont": "inter",
+    "baseSize": 17,
+    "radius": 14,
+    "heroLayout": "split",
+    "heroBackground": "starfield",
+    "heroImage": "",
+    "heroOverlay": 65,
+    "cardStyle": "glass",
+    "animations": true,
+    "logo": "",
+    "favicon": ""
+  },
+  "sections": [
+    {
+      "id": "games",
+      "enabled": true
+    },
+    {
+      "id": "devlog",
+      "enabled": false
+    },
+    {
+      "id": "about",
+      "enabled": true
+    },
+    {
+      "id": "cta",
+      "enabled": true
+    }
+  ],
+  "games": {
+    "heading": "Games",
+    "intro": "Prototypes you can play right now, straight in your browser.",
+    "items": [
+      {
+        "title": "Mage vs. Horde",
+        "description": "Cast huge spells from a tower into an endless horde of orcs. A physics prototype.",
+        "url": "https://elarion-game-dev.github.io/mage-vs-horde/",
+        "image": "https://elarion-game-dev.github.io/mage-vs-horde/preview.jpg",
+        "imageAlt": "A meteor lands in a horde of orcs, seen from the top of a stone tower.",
+        "status": "Playable prototype",
+        "tags": [
+          "Browser",
+          "Physics"
+        ],
+        "linkLabel": "Play in browser"
+      },
+      {
+        "title": "Bottle Roll Incremental",
+        "description": "Roll glass bottles down the stairs, film the smash and grow your channel.",
+        "url": "https://elarion-game-dev.github.io/bottle-roll-incremental/",
+        "image": "https://elarion-game-dev.github.io/bottle-roll-incremental/preview.jpg",
+        "imageAlt": "A glass bottle shattering on a flight of stairs.",
+        "status": "Playable",
+        "tags": [
+          "Browser",
+          "Incremental"
+        ],
+        "linkLabel": "Play in browser"
+      }
+    ]
+  },
+  "devlog": {
+    "heading": "Devlog",
+    "intro": "Notes from the workbench.",
+    "items": [
+      {
+        "date": "2026-10-25",
+        "title": "The Elarion site is live",
+        "body": "A home for my games, and a newsletter for everyone who wants to follow along.",
+        "url": ""
+      }
+    ]
+  },
+  "about": {
+    "heading": "About Elarion",
+    "navLabel": "About",
+    "body": "Elarion is the name I make games under. I build for the browser, prototype fast and share the process along the way, including the parts that don't work.\n\nRight now I'm exploring physics-heavy ideas: hordes, destruction and satisfying chaos. Subscribe and you'll see each new prototype first.",
+    "image": "",
+    "imageAlt": ""
+  },
+  "cta": {
+    "heading": "Don't miss the next game",
+    "body": "One email when there's something new to play. No spam, unsubscribe any time.",
+    "buttonLabel": "Join the newsletter"
+  },
+  "socials": [
+    {
+      "platform": "github",
+      "url": "https://github.com/elarion-game-dev",
+      "label": ""
+    }
+  ],
+  "privacy": {
+    "controllerName": "",
+    "controllerAddress": "",
+    "country": "",
+    "minimumAge": 16,
+    "emailTracking": true,
+    "effectiveDate": "2026-10-25",
+    "extra": ""
+  },
+  "legal": {
+    "enabled": false,
+    "heading": "Legal notice",
+    "body": ""
+  },
+  "seo": {
+    "title": "Elarion · Indie game developer",
+    "description": "Elarion makes physics-driven browser games. Play the prototypes and join the newsletter to follow the journey.",
+    "ogImage": "/assets/img/og.png",
+    "ogImageAlt": "Elarion: indie game developer",
+    "indexable": true
+  }
+}
