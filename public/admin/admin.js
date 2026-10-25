@@ -7,6 +7,7 @@ import { pageIdForPath, previewPages, renderPage, sortedPosts } from '../assets/
 import { DEFAULT_SETTINGS, normalizeSettings } from '../assets/lib/settings.mjs';
 import { FONTS, PRESETS, PRESET_KEYS, fontFaces, fontStack, themeCss } from '../assets/lib/themes.mjs';
 import { getPath, setPath, slugify } from '../assets/lib/util.mjs';
+import { startHalftoneFromMarkup } from '../assets/js/halftone.js';
 import { ConflictError, GitHub } from './github.js';
 import { PANELS } from './panels.js';
 import { confirmDialog, h, icon, toast } from './ui.js';
@@ -411,6 +412,7 @@ async function discard() {
 let activeFrame = 0;
 let themeUrl = null;
 let pendingAnchor = '';
+let previewDots = null;
 
 // URLs inside a blob: stylesheet can't be relative (a blob URL has no path to resolve against).
 const FONT_BASE = new URL('/assets/fonts/', location.href).href;
@@ -437,7 +439,7 @@ function renderPreview() {
   const settings = app.normalized();
   syncPageSelect(settings);
   const heroImage = settings.theme.heroImage ? absolute(app.imageSrc(settings.theme.heroImage)) : '';
-  const css = themeCss(settings.theme, { imageUrl: heroImage, fontBase: FONT_BASE });
+  const css = themeCss(settings.theme, { imageUrl: heroImage, fontBase: FONT_BASE, effects: settings.effects });
   const nextThemeUrl = URL.createObjectURL(new Blob([css], { type: 'text/css' }));
   const html = renderPage(settings, app.previewPage, { preview: true, previewSuccess: app.previewSuccess, themeHref: nextThemeUrl, resolveImage: app.imageSrc });
 
@@ -447,6 +449,12 @@ function renderPreview() {
   next.onload = () => {
     const doc = next.contentDocument;
     wirePreview(doc);
+    // The preview frame may not run scripts, so the admin draws its halftone dots for it.
+    previewDots?.destroy();
+    const canvas = doc.querySelector('canvas[data-halftone]');
+    previewDots = canvas
+      ? startHalftoneFromMarkup(canvas, { win: next.contentWindow, raf: (fn) => window.requestAnimationFrame(fn), imageSrc: (src) => absolute(app.imageSrc(src)) })
+      : null;
     const anchor = pendingAnchor && doc.getElementById(pendingAnchor);
     if (anchor) anchor.scrollIntoView();
     else next.contentWindow.scrollTo(0, scrollY);
@@ -466,6 +474,11 @@ function wirePreview(doc) {
     const anchor = event.target.closest('a[href]');
     if (!anchor) return;
     event.preventDefault();
+    // The phone menu opens with :target on the live site; the preview toggles it directly.
+    if (anchor.matches('.menu-toggle, .menu-close')) {
+      doc.getElementById('site-menu')?.classList.toggle('is-open', anchor.matches('.menu-toggle'));
+      return;
+    }
     const href = anchor.getAttribute('href');
     if (href.startsWith('#')) {
       doc.getElementById(href.slice(1))?.scrollIntoView({ behavior: 'smooth' });
@@ -559,6 +572,9 @@ const AREA_NAMES = {
   site: 'site details',
   nav: 'menu',
   home: 'home page',
+  socialBand: 'social band',
+  footer: 'footer',
+  effects: 'effects',
   newsletter: 'newsletter',
   wishlist: 'Steam wishlist',
   theme: 'appearance',

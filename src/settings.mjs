@@ -8,7 +8,8 @@ import { PROVIDER_IDS } from './providers.mjs';
 import { BUTTON_STYLES, CARD_STYLES, FONT_IDS, FORM_LAYOUTS, HEADING_CASES, HERO_BACKGROUNDS, PRESETS } from './themes.mjs';
 import { clamp, isEmail, isHexColor, isPlainObject, safeAssetPath, safeUrl, slugify } from './util.mjs';
 
-export const SCHEMA_VERSION = 2;
+// 3: social band and effects became top-level settings; social links can be saved without a URL.
+export const SCHEMA_VERSION = 3;
 export const NAV_IDS = ['home', 'news', 'press'];
 export const NAV_LABELS = { home: 'Home', news: 'News', press: 'Press kit' };
 export const HOME_LAYOUTS = { 'about-first': 'About text first, then sign-up', 'signup-first': 'Sign-up first, then about text' };
@@ -26,8 +27,21 @@ export const PRESS_SECTION_LABELS = {
   contact: 'Contact',
 };
 export const LOGO_BACKGROUNDS = { dark: 'Dark tile', light: 'Light tile', checker: 'Checkerboard' };
-export const SOCIAL_PLATFORMS ={ ...Object.fromEntries(Object.entries(BRAND_ICONS).map(([k, v]) => [k, v.title])), email: 'Email', website: 'Website', rss: 'RSS' };
-export const LIMITS = { posts: 100, perks: 6, socials: 16, facts: 20, features: 20, images: 40, logos: 12, videos: 12, quotes: 20, team: 30 };
+const EXTRA_PLATFORMS = { email: 'Email', website: 'Website', rss: 'RSS feed' };
+export const SOCIAL_GROUPS = {
+  'Stores & platforms': ['steam', 'itch', 'epic', 'gog', 'playstation', 'appstore', 'googleplay', 'gamejolt', 'newgrounds'],
+  Community: ['discord', 'reddit', 'telegram'],
+  'Video & streaming': ['youtube', 'twitch', 'kick', 'tiktok'],
+  Social: ['bluesky', 'x', 'mastodon', 'threads', 'instagram', 'facebook', 'tumblr'],
+  'Support & crowdfunding': ['kickstarter', 'patreon', 'kofi', 'buymeacoffee'],
+  Other: ['github', 'artstation', 'substack', 'linktree', 'email', 'website', 'rss'],
+};
+export const SOCIAL_PLATFORMS = Object.fromEntries(Object.values(SOCIAL_GROUPS).flat().map((id) => [id, BRAND_ICONS[id]?.title ?? EXTRA_PLATFORMS[id]]));
+export const NAV_STYLES = { 'bar-stepped': 'Hanging bar, pixel corners', 'bar-rounded': 'Hanging bar, rounded corners', classic: 'Full-width header' };
+export const BAND_PLACES = { all: 'Every page', home: 'Home page only', off: 'Nowhere' };
+export const HALFTONE_PLACES = { home: 'Home page background', all: 'Every page' };
+export const HALFTONE_COLORS = { accent2: 'Second accent', accent: 'Accent', text: 'Text colour' };
+export const LIMITS = { posts: 100, perks: 6, socials: 24, facts: 20, features: 20, images: 40, logos: 12, videos: 12, quotes: 20, team: 30 };
 
 const DEFAULT_PRESET = PRESETS.twilight;
 
@@ -44,6 +58,9 @@ export const DEFAULT_SETTINGS = {
     home: { enabled: true, label: 'Home' },
     news: { enabled: true, label: 'News' },
     press: { enabled: true, label: 'Press Kit' },
+    style: 'bar-stepped',
+    dividers: true,
+    showSocials: true,
   },
   home: {
     layout: 'about-first',
@@ -55,7 +72,12 @@ export const DEFAULT_SETTINGS = {
       heading: 'About Elarion',
       body: 'Elarion is an indie game developer building a new game in the open. Follow along from the first sketches to launch day, and help shape the game in early playtests.',
     },
-    socials: { enabled: true, heading: 'Follow Elarion' },
+  },
+  socialBand: { show: 'all', heading: 'Follow Elarion' },
+  footer: { note: 'No cookies, no tracking.' },
+  effects: {
+    crt: { enabled: true, scanlines: 22, flicker: true, rgbText: true, vignette: true },
+    halftone: { enabled: true, where: 'home', color: 'accent2', opacity: 30, size: 11, angle: 45, mouse: 60 },
   },
   newsletter: {
     provider: 'none',
@@ -146,7 +168,8 @@ export const DEFAULT_SETTINGS = {
     team: [],
     contact: 'For press enquiries, review copies and interviews, get in touch.',
   },
-  socials: [],
+  // Common game-dev links, ready to fill in. Entries without a URL are only shown (faded) in the admin preview.
+  socials: ['steam', 'discord', 'youtube', 'bluesky', 'x', 'tiktok'].map((platform) => ({ platform, url: '', label: '', inMenu: true, inBand: true })),
   privacy: {
     controllerName: '',
     controllerAddress: '',
@@ -246,6 +269,19 @@ export function normalizeSettings(input) {
   const privacy = obj(raw.privacy);
   const legal = obj(raw.legal);
   const seo = obj(raw.seo);
+  // Settings saved before version 3 kept the band under home.socials and dropped links without a URL.
+  const legacy = Number(raw.schemaVersion) < 3;
+  const oldBand = obj(home.socials);
+  const band = raw.socialBand
+    ? obj(raw.socialBand)
+    : legacy && raw.home?.socials
+      ? { show: oldBand.enabled === false ? 'off' : 'all', heading: oldBand.heading }
+      : {};
+  const socialsIn = legacy && Array.isArray(raw.socials) && raw.socials.length === 0 ? d.socials : raw.socials;
+  const crt = obj(obj(raw.effects).crt);
+  const dots = obj(obj(raw.effects).halftone);
+  const dc = d.effects.crt;
+  const dd = d.effects.halftone;
   const email = line(site.contactEmail, 254, '').trim();
 
   return {
@@ -257,12 +293,17 @@ export function normalizeSettings(input) {
       contactEmail: isEmail(email) ? email : '',
       copyrightName: line(site.copyrightName, 80, d.site.copyrightName),
     },
-    nav: Object.fromEntries(
-      NAV_IDS.map((id) => {
-        const item = obj(nav[id]);
-        return [id, { enabled: bool(item.enabled, d.nav[id].enabled), label: required(item.label, 30, d.nav[id].label) }];
-      })
-    ),
+    nav: {
+      ...Object.fromEntries(
+        NAV_IDS.map((id) => {
+          const item = obj(nav[id]);
+          return [id, { enabled: bool(item.enabled, d.nav[id].enabled), label: required(item.label, 30, d.nav[id].label) }];
+        })
+      ),
+      style: oneOf(nav.style, Object.keys(NAV_STYLES), d.nav.style),
+      dividers: bool(nav.dividers, d.nav.dividers),
+      showSocials: bool(nav.showSocials, d.nav.showSocials),
+    },
     home: {
       layout: oneOf(home.layout, Object.keys(HOME_LAYOUTS), d.home.layout),
       showLogo: bool(home.showLogo, d.home.showLogo),
@@ -273,9 +314,28 @@ export function normalizeSettings(input) {
         heading: line(obj(home.about).heading, 100, d.home.about.heading),
         body: str(obj(home.about).body, 3000, d.home.about.body),
       },
-      socials: {
-        enabled: bool(obj(home.socials).enabled, d.home.socials.enabled),
-        heading: line(obj(home.socials).heading, 80, d.home.socials.heading),
+    },
+    socialBand: {
+      show: oneOf(band.show, Object.keys(BAND_PLACES), d.socialBand.show),
+      heading: line(band.heading, 80, d.socialBand.heading),
+    },
+    footer: { note: line(obj(raw.footer).note, 120, d.footer.note) },
+    effects: {
+      crt: {
+        enabled: bool(crt.enabled, dc.enabled),
+        scanlines: num(crt.scanlines, 0, 60, dc.scanlines),
+        flicker: bool(crt.flicker, dc.flicker),
+        rgbText: bool(crt.rgbText, dc.rgbText),
+        vignette: bool(crt.vignette, dc.vignette),
+      },
+      halftone: {
+        enabled: bool(dots.enabled, dd.enabled),
+        where: oneOf(dots.where, Object.keys(HALFTONE_PLACES), dd.where),
+        color: oneOf(dots.color, Object.keys(HALFTONE_COLORS), dd.color),
+        opacity: num(dots.opacity, 5, 80, dd.opacity),
+        size: num(dots.size, 6, 28, dd.size),
+        angle: num(dots.angle, 0, 90, dd.angle),
+        mouse: num(dots.mouse, 0, 100, dd.mouse),
       },
     },
     newsletter: {
@@ -358,13 +418,17 @@ export function normalizeSettings(input) {
       team: list(press.team, LIMITS.team, []).map((t) => ({ name: line(obj(t).name, 80, ''), role: line(obj(t).role, 80, ''), url: link(obj(t).url) })),
       contact: str(press.contact, 1000, d.press.contact),
     },
-    socials: list(raw.socials, LIMITS.socials, d.socials)
-      .map((s) => {
-        const item = obj(s);
-        const platform = oneOf(item.platform, Object.keys(SOCIAL_PLATFORMS), 'website');
-        return { platform, url: link(item.url), label: line(item.label, 40, '') };
-      })
-      .filter((s) => s.url),
+    // Entries without a URL are kept so the admin can offer them ready to fill in; pages skip them.
+    socials: list(socialsIn, LIMITS.socials, d.socials).map((s) => {
+      const item = obj(s);
+      return {
+        platform: oneOf(item.platform, Object.keys(SOCIAL_PLATFORMS), 'website'),
+        url: link(item.url),
+        label: line(item.label, 40, ''),
+        inMenu: bool(item.inMenu, true),
+        inBand: bool(item.inBand, true),
+      };
+    }),
     privacy: {
       controllerName: line(privacy.controllerName, 120, ''),
       controllerAddress: str(privacy.controllerAddress, 300, ''),
@@ -420,6 +484,14 @@ export function setupChecklist(settings, provider) {
       title: 'Add your Steam page (optional)',
       detail: 'Shown as a "Wishlist on Steam" button after people subscribe.',
       panel: 'home',
+    },
+    {
+      id: 'socials',
+      done: settings.socials.some((s) => s.url),
+      optional: true,
+      title: 'Add your social links (optional)',
+      detail: 'They appear in the top menu and the "Follow" band.',
+      panel: 'socials',
     },
   ];
 }

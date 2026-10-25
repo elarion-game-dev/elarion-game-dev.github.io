@@ -14,6 +14,7 @@ export const ICONS = {
   privacy: '<path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5V6L12 3z"/>',
   seo: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
   history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>',
+  effects: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M3 8h18M3 12h18M8 21h8"/>',
   up: '<path d="m6 15 6-6 6 6"/>',
   down: '<path d="m6 9 6 6 6-6"/>',
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
@@ -164,13 +165,15 @@ export function toggle(app, path, { label, help, rerender } = {}) {
   );
 }
 
+/** options: { value: label } or, for grouped lists, { 'Group': { value: label } }. */
 export function select(app, path, { label, help, options, rerender, onChange } = {}) {
   const id = nextId();
   const current = app.get(path);
+  const option = ([value, text]) => h('option', { value, selected: value === current }, text);
   const input = h(
     'select',
     { id, class: 'input' },
-    Object.entries(options).map(([value, text]) => h('option', { value, selected: value === current }, text))
+    Object.entries(options).map(([key, value]) => (typeof value === 'object' ? h('optgroup', { label: key }, Object.entries(value).map(option)) : option([key, value])))
   );
   input.addEventListener('change', () => {
     app.set(path, input.value);

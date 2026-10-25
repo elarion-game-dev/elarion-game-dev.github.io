@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { markdown } from '../src/markdown.mjs';
 import { resolveProvider } from '../src/providers.mjs';
-import { renderSite } from '../src/render.mjs';
+import { renderPage, renderSite } from '../src/render.mjs';
 import { DEFAULT_SETTINGS, normalizeSettings } from '../src/settings.mjs';
 import { contrastReport, PRESETS } from '../src/themes.mjs';
 import { safeAssetPath, safeUrl } from '../src/util.mjs';
@@ -35,7 +35,12 @@ function hostileSettings() {
   s.nav.news.label = XSS;
   s.nav.press.label = XSS;
   s.home.about = { enabled: true, heading: XSS, body: `${XSS}\n\n[click](${EVIL_URL}) [ok](https://example.com)` };
-  s.home.socials.heading = XSS;
+  s.socialBand.heading = XSS;
+  s.footer.note = XSS;
+  s.nav.style = '"><script>';
+  s.effects.halftone.color = '"><script>alert(1)</script>';
+  s.effects.halftone.size = '"><script>';
+  s.effects.crt.scanlines = '1); background: url(javascript:alert(1))';
   s.home.logoImage = 'https://evil.example/tracker.png';
   s.newsletter.provider = 'kit';
   s.newsletter.kit.formId = '123"><script>alert(1)</script>';
@@ -59,7 +64,10 @@ function hostileSettings() {
   s.press.videos = [{ title: XSS, url: EVIL_URL }];
   s.press.quotes = [{ quote: XSS, source: XSS, url: EVIL_URL }];
   s.press.team = [{ name: XSS, role: XSS, url: EVIL_URL }];
-  s.socials = [{ platform: 'github', url: EVIL_URL, label: '' }, { platform: '<b>', url: 'https://ok.example', label: XSS }];
+  s.socials = [
+    { platform: 'github', url: EVIL_URL, label: '', inMenu: true, inBand: true },
+    { platform: '<b>', url: 'https://ok.example', label: XSS, inMenu: 'yes', inBand: 1 },
+  ];
   s.privacy.extra = XSS;
   s.legal = { enabled: true, heading: XSS, body: XSS };
   s.seo.title = XSS;
@@ -120,8 +128,13 @@ await test('Hostile settings normalise to safe values', () => {
   assert.equal(post.url, '');
   assert.equal(post.image, '');
   assert.equal(s.press.videos[0].url, '');
-  assert.equal(s.socials.length, 1, 'social with javascript: URL is dropped');
-  assert.equal(s.socials[0].platform, 'website');
+  assert.equal(s.socials[0].url, '', 'javascript: URL is dropped');
+  assert.equal(s.socials[1].platform, 'website');
+  assert.equal(s.socials[1].inMenu, true, 'non-boolean toggles fall back to the default');
+  assert.equal(s.nav.style, 'bar-stepped');
+  assert.equal(s.effects.halftone.color, 'accent2');
+  assert.equal(s.effects.halftone.size, DEFAULT_SETTINGS.effects.halftone.size);
+  assert.equal(s.effects.crt.scanlines, DEFAULT_SETTINGS.effects.crt.scanlines);
   assert.equal(resolveProvider(s.newsletter).ready, false, 'invalid Kit form ID is rejected');
 });
 
@@ -182,6 +195,75 @@ await test('Menu switches remove pages, links and the feed', () => {
   assert.ok(!/href="\/(news|press)\/"/.test(off['index.html']), 'no links to switched-off pages');
   assert.ok(!off['sitemap.xml'].includes('/news/'));
   assert.ok(!off['index.html'].includes('class="site-header"'), 'no header when the menu is empty and the logo shows');
+});
+
+await test('Menu shows the pages, star dividers and only socials that have a link', () => {
+  const s = structuredClone(DEFAULT_SETTINGS);
+  s.socials = [
+    { platform: 'discord', url: 'https://discord.gg/abc', label: '', inMenu: true, inBand: false },
+    { platform: 'youtube', url: '', label: '', inMenu: true, inBand: true },
+    { platform: 'steam', url: 'https://store.steampowered.com/app/1/', label: '', inMenu: false, inBand: true },
+  ];
+  const n = normalizeSettings(s);
+  const live = renderSite(n, { version: 'v' })['press/index.html'];
+  const nav = live.match(/<nav class="nav-bar"[\s\S]*?<\/nav>/)[0];
+  assert.match(nav, /href="\/news\/"/);
+  assert.match(nav, /class="nav-divider"/);
+  assert.match(nav, /href="https:\/\/discord\.gg\/abc"/);
+  assert.ok(!nav.includes('steampowered'), 'steam is not set to show in the menu');
+  assert.ok(!nav.includes('is-placeholder'), 'links without a URL are not on the live site');
+  assert.match(live, /class="social-band"[\s\S]*steampowered/, 'band shows its own selection');
+  assert.ok(!/class="social-band"[\s\S]*discord\.gg/.test(live), 'discord is not set to show in the band');
+  const preview = renderPage(n, 'home', { preview: true });
+  assert.match(preview, /class="is-placeholder"/, 'the preview shows unfilled links faded');
+});
+
+await test('Footer is one small line without the logo', () => {
+  const html = renderSite(normalizeSettings(DEFAULT_SETTINGS), { version: 'v' })['news/index.html'];
+  const footer = html.match(/<footer class="site-footer">[\s\S]*?<\/footer>/)[0];
+  assert.ok(!footer.includes('class="brand"') && !footer.includes('sigil'), footer);
+  assert.match(footer, /href="\/privacy\/"/);
+});
+
+await test('Social band follows its placement setting', () => {
+  const withLink = (show) => {
+    const s = structuredClone(DEFAULT_SETTINGS);
+    s.socials = [{ platform: 'discord', url: 'https://discord.gg/abc', label: '', inMenu: true, inBand: true }];
+    s.socialBand.show = show;
+    return renderSite(normalizeSettings(s), { version: 'v' });
+  };
+  assert.ok(withLink('all')['press/index.html'].includes('class="social-band"'));
+  assert.ok(!withLink('home')['press/index.html'].includes('class="social-band"'));
+  assert.ok(withLink('home')['index.html'].includes('class="social-band"'));
+  assert.ok(!withLink('off')['index.html'].includes('class="social-band"'));
+});
+
+await test('CRT and halftone follow the effect settings', () => {
+  const on = renderSite(normalizeSettings(DEFAULT_SETTINGS), { version: 'v' });
+  assert.match(on['index.html'], /<html[^>]* data-crt data-crt-flicker data-crt-rgb data-crt-vignette/);
+  assert.match(on['index.html'], /<canvas class="halftone halftone-hero" data-halftone data-color="accent2"/);
+  assert.ok(!on['press/index.html'].includes('data-halftone'), 'dots only on the home page by default');
+  assert.match(on['assets/css/theme.css'], /--crt-scanlines: 0\.22;[\s\S]*--halftone-opacity: 0\.30;/);
+  const s = structuredClone(DEFAULT_SETTINGS);
+  s.effects.crt.enabled = false;
+  s.effects.halftone.where = 'all';
+  const off = renderSite(normalizeSettings(s), { version: 'v' });
+  assert.ok(!off['index.html'].includes('data-crt'));
+  assert.match(off['press/index.html'], /<canvas class="halftone halftone-fixed"/);
+  s.effects.halftone.enabled = false;
+  assert.ok(!renderSite(normalizeSettings(s), { version: 'v' })['index.html'].includes('<canvas'));
+});
+
+await test('Settings from before version 3 keep their band heading and get ready-to-fill socials', () => {
+  const old = structuredClone(DEFAULT_SETTINGS);
+  old.schemaVersion = 2;
+  delete old.socialBand;
+  old.home.socials = { enabled: true, heading: 'Follow me on socials' };
+  old.socials = [];
+  const s = normalizeSettings(old);
+  assert.deepEqual(s.socialBand, { show: 'all', heading: 'Follow me on socials' });
+  assert.equal(s.socials.length, DEFAULT_SETTINGS.socials.length);
+  assert.equal(normalizeSettings({ ...s, socials: [] }).socials.length, 0, 'an empty list saved by version 3 stays empty');
 });
 
 await test('Default settings are stable', () => {

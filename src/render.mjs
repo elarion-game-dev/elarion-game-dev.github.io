@@ -24,6 +24,8 @@ const STROKE = {
   website: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/>',
   email: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
   rss: '<path d="M5 4.5a14.5 14.5 0 0 1 14.5 14.5M5 11a8 8 0 0 1 8 8"/><circle cx="6" cy="18" r="1.25"/>',
+  menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+  close: '<path d="M6 6l12 12M18 6 6 18"/>',
 };
 
 const icon = (name, cls = 'icon') =>
@@ -159,31 +161,65 @@ function brand(settings, ctx) {
   return `<a class="brand" href="/">${logo}<span class="brand-name">${esc(settings.site.name)}</span></a>`;
 }
 
-function socialLinks(settings, cls) {
-  if (!settings.socials.length) return '';
-  const items = settings.socials
+const EXTRA_SOCIAL_NAMES = { email: 'Email', website: 'Website', rss: 'RSS feed' };
+
+/**
+ * Social links for one place: "menu", "band" or "all". Links without a URL only appear in the admin
+ * preview (faded), so the owner can see where they will go before filling them in.
+ */
+function socialItems(settings, ctx, where) {
+  return settings.socials
+    .filter((s) => (where === 'menu' ? s.inMenu : where === 'band' ? s.inBand : true) && (s.url || ctx.preview))
     .map((s) => {
-      const name = s.label || (BRAND_ICONS[s.platform]?.title ?? { email: 'Email', website: 'Website', rss: 'RSS feed' }[s.platform]);
+      const name = s.label || BRAND_ICONS[s.platform]?.title || EXTRA_SOCIAL_NAMES[s.platform] || 'Link';
+      if (!s.url) return `<li><a href="#" class="is-placeholder" aria-label="${esc(name)} (no link yet)" title="${esc(name)}: add the link under Social links">${brandIcon(s.platform)}</a></li>`;
       const external = /^https?:/.test(s.url);
       return `<li><a href="${esc(s.url)}"${external ? ' rel="me noopener"' : ''} aria-label="${esc(name)}" title="${esc(name)}">${brandIcon(s.platform)}</a></li>`;
     })
     .join('');
-  return `<ul class="${cls}">${items}</ul>`;
+}
+
+function socialLinks(settings, ctx, cls, where = 'all') {
+  const items = socialItems(settings, ctx, where);
+  return items ? `<ul class="${cls}">${items}</ul>` : '';
 }
 
 function header(settings, ctx, info) {
-  const links = NAV_IDS.filter((id) => settings.nav[id].enabled)
-    .map((id) => `<a class="nav-link" href="${NAV_PATHS[id]}"${info.nav === id ? ' aria-current="page"' : ''}>${esc(settings.nav[id].label)}</a>`)
-    .join('');
-  // On the home page the big logo already shows the name.
-  const showBrand = !(info.id === 'home' && settings.home.showLogo);
-  if (!links && !showBrand) return '';
-  return `<header class="site-header">
-  <div class="container header-inner">
-    ${showBrand ? brand(settings, ctx) : ''}
-    ${links ? `<nav class="site-nav" aria-label="Main">${links}</nav>` : ''}
-  </div>
+  const nav = settings.nav;
+  const divider = nav.dividers ? `<li class="nav-divider" aria-hidden="true">${sigil()}</li>` : '';
+  const items = NAV_IDS.filter((id) => nav[id].enabled).map(
+    (id) => `<li><a class="nav-link" href="${NAV_PATHS[id]}"${info.nav === id ? ' aria-current="page"' : ''}>${esc(nav[id].label)}</a></li>`
+  );
+  // With "Home" hidden from the menu, the star mark links home instead.
+  if (!nav.home.enabled && info.id !== 'home') items.unshift(`<li><a class="nav-link nav-mark" href="/" aria-label="${esc(settings.site.name)}: home">${sigil()}</a></li>`);
+  const socials = nav.showSocials ? socialItems(settings, ctx, 'menu') : '';
+  const classic = nav.style === 'classic';
+  // In the classic header the brand sits on the left, except on the home page where the big logo shows the name.
+  const brandHtml = classic && !(info.id === 'home' && settings.home.showLogo) ? brand(settings, ctx) : '';
+  if (!items.length && !socials && !brandHtml) return '';
+  return `<header class="site-header" data-nav="${nav.style}">
+  <a class="menu-toggle" href="#site-menu" aria-controls="site-menu" aria-expanded="false" aria-label="Menu">${icon('menu')}</a>
+  <nav class="nav-bar" id="site-menu" aria-label="Main">
+    ${brandHtml}
+    ${items.length ? `<ul class="nav-links">${items.join(divider)}</ul>` : ''}
+    ${socials ? `${items.length && nav.dividers ? `<span class="nav-divider nav-divider-socials" aria-hidden="true">${sigil()}</span>` : ''}<ul class="nav-socials">${socials}</ul>` : ''}
+    <a class="menu-close" href="#" aria-label="Close menu">${icon('close')}</a>
+  </nav>
 </header>`;
+}
+
+/** "Follow us" band at the bottom of the page. */
+function socialBand(settings, ctx, info) {
+  const band = settings.socialBand;
+  if (band.show === 'off' || (band.show === 'home' && info.id !== 'home')) return '';
+  const links = socialLinks(settings, ctx, 'social-tiles', 'band');
+  if (!links) return '';
+  return `<section class="social-band"${band.heading ? ' aria-labelledby="social-title"' : ' aria-label="Social links"'}>
+  <div class="container">
+    ${band.heading ? `<h2 id="social-title">${esc(band.heading)}</h2>` : ''}
+    ${links}
+  </div>
+</section>`;
 }
 
 function footer(settings, ctx) {
@@ -195,12 +231,19 @@ function footer(settings, ctx) {
   ].filter(Boolean);
   return `<footer class="site-footer">
   <div class="container footer-inner">
-    ${brand(settings, ctx)}
-    <nav class="footer-nav" aria-label="Footer">${links.join('')}</nav>
-    <p class="footer-note">${icon('shield')}<span>No cookies, no tracking. Your email is only ever used for the newsletter.</span></p>
     <p class="copyright">© ${ctx.year} ${esc(settings.site.copyrightName || settings.site.name)}</p>
+    <nav class="footer-nav" aria-label="Footer">${links.join('')}</nav>
+    ${settings.footer.note ? `<p class="footer-note">${esc(settings.footer.note)}</p>` : ''}
   </div>
 </footer>`;
+}
+
+/** The canvas the halftone script draws into (see assets/js/halftone.js). */
+function halftoneCanvas(settings, cls) {
+  const h = settings.effects.halftone;
+  const t = settings.theme;
+  const image = t.heroBackground === 'image' && t.heroImage ? t.heroImage : '';
+  return `<canvas class="halftone ${cls}" data-halftone data-color="${h.color}" data-size="${h.size}" data-angle="${h.angle}" data-mouse="${h.mouse}"${image ? ` data-image="${esc(image)}"` : ''} aria-hidden="true"></canvas>`;
 }
 
 function layout(settings, ctx, info, main) {
@@ -216,9 +259,13 @@ function layout(settings, ctx, info, main) {
   const favicon = t.favicon ? ctx.img(t.favicon) : `/assets/img/favicon.svg${v}`;
   const font = ctx.preview ? '' : preloadFont(t.headingFont);
   const feed = s.nav.news.enabled ? `<link rel="alternate" type="application/rss+xml" title="${esc(`${s.news.heading} · ${s.site.name}`)}" href="/news/feed.xml">\n` : '';
+  const crt = s.effects.crt;
+  const crtAttrs = crt.enabled ? ` data-crt${crt.flicker ? ' data-crt-flicker' : ''}${crt.rgbText ? ' data-crt-rgb' : ''}${crt.vignette ? ' data-crt-vignette' : ''}` : '';
+  // The home page draws its dots inside the hero; other pages get a fixed layer behind everything.
+  const dots = s.effects.halftone.enabled && s.effects.halftone.where === 'all' && info.id !== 'home' ? `${halftoneCanvas(s, 'halftone-fixed')}\n` : '';
 
   return `<!doctype html>
-<html lang="${esc(s.site.language)}" data-hero="${t.heroBackground}" data-cards="${t.cardStyle}" data-buttons="${t.buttonStyle}" data-form="${t.formLayout}" data-motion="${t.animations ? 'on' : 'off'}"${ctx.preview ? ' data-preview' : ''}>
+<html lang="${esc(s.site.language)}" data-hero="${t.heroBackground}" data-cards="${t.cardStyle}" data-buttons="${t.buttonStyle}" data-form="${t.formLayout}" data-nav="${s.nav.style}" data-motion="${t.animations ? 'on' : 'off'}"${crtAttrs}${ctx.preview ? ' data-preview' : ''}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -240,10 +287,11 @@ ${feed}${font ? `<link rel="preload" href="/assets/fonts/${font}" as="font" type
 <link rel="stylesheet" href="/assets/css/site.css${v}">
 ${ctx.preview ? '' : `<script type="module" src="/assets/js/site.js${v}"></script>\n`}</head>
 <body class="page-${info.kind}">
-<a class="skip-link" href="#main">Skip to content</a>
+${dots}<a class="skip-link" href="#main">Skip to content</a>
 ${header(s, ctx, info)}
 <main id="main" tabindex="-1">
 ${main}
+${socialBand(s, ctx, info)}
 </main>
 ${footer(s, ctx)}
 </body>
@@ -364,24 +412,15 @@ function homePage(settings, ctx) {
     </section>`;
 
   const blocks = h.layout === 'signup-first' ? [signupBlock, about] : [about, signupBlock];
-  const band =
-    h.socials.enabled && settings.socials.length
-      ? `<section class="social-band"${h.socials.heading ? ' aria-labelledby="social-title"' : ' aria-label="Social links"'}>
-  <div class="container">
-    ${h.socials.heading ? `<h2 id="social-title">${esc(h.socials.heading)}</h2>` : ''}
-    ${socialLinks(settings, 'social-tiles')}
-  </div>
-</section>`
-      : '';
+  const dots = settings.effects.halftone.enabled ? halftoneCanvas(settings, 'halftone-hero') : '';
 
   return `<section class="home-hero">
-  <div class="hero-bg" aria-hidden="true"><span class="hero-layer hero-layer-a"></span><span class="hero-layer hero-layer-b"></span></div>
+  <div class="hero-bg" aria-hidden="true"><span class="hero-layer hero-layer-a"></span><span class="hero-layer hero-layer-b"></span>${dots}</div>
   <div class="container home-column">
     ${logo}
     ${blocks.filter(Boolean).join('\n    ')}
   </div>
-</section>
-${band}`;
+</section>`;
 }
 
 // --- news -----------------------------------------------------------------------
@@ -461,13 +500,14 @@ ${items}
 
 // --- press kit ------------------------------------------------------------------
 
-function factsheet(settings, section) {
+function factsheet(settings, ctx, section) {
   const pr = settings.press;
   const rows = pr.facts.map(
     (f) => `<div class="fact"><dt>${esc(f.label)}</dt><dd>${f.url ? `<a href="${esc(f.url)}"${/^https?:/.test(f.url) ? ' rel="noopener"' : ''}>${esc(f.value || f.url)}</a>` : esc(f.value)}</dd></div>`
   );
   if (settings.site.contactEmail) rows.push(`<div class="fact"><dt>Press contact</dt><dd><a href="mailto:${esc(settings.site.contactEmail)}">${esc(settings.site.contactEmail)}</a></dd></div>`);
-  if (settings.socials.length) rows.push(`<div class="fact"><dt>Social</dt><dd>${socialLinks(settings, 'socials socials-small')}</dd></div>`);
+  const socials = socialLinks(settings, ctx, 'socials socials-small');
+  if (socials) rows.push(`<div class="fact"><dt>Social</dt><dd>${socials}</dd></div>`);
   if (!rows.length) return '';
   return `<h2 id="press-factsheet-title">${esc(section.heading)}</h2>\n      <dl class="facts">${rows.join('')}</dl>`;
 }
@@ -544,11 +584,11 @@ function pressContent(settings, id) {
   }
 }
 
-function pressPage(settings) {
+function pressPage(settings, ctx) {
   const pr = settings.press;
   const enabled = pr.sections.filter((s) => s.enabled);
   const factSection = enabled.find((s) => s.id === 'factsheet');
-  const facts = factSection ? factsheet(settings, factSection) : '';
+  const facts = factSection ? factsheet(settings, ctx, factSection) : '';
   const sections = enabled
     .filter((s) => s.id !== 'factsheet')
     .map((s) => {
@@ -754,7 +794,7 @@ export function renderSite(settings, opts = {}) {
   for (const id of pages) files[pageInfo(s, id).file] = renderPage(s, id, opts);
   if (s.nav.news.enabled) files['news/feed.xml'] = rssFeed(s);
 
-  files['assets/css/theme.css'] = themeCss(s.theme);
+  files['assets/css/theme.css'] = themeCss(s.theme, { effects: s.effects });
   files['assets/img/favicon.svg'] = faviconSvg(s.theme.colors.accent);
 
   const today = ctx.now.toISOString().slice(0, 10);

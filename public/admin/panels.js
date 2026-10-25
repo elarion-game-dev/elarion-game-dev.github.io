@@ -2,7 +2,21 @@
 // `page` is the preview page a panel switches to when it is opened.
 
 import { PROVIDERS, resolveProvider } from '../assets/lib/providers.mjs';
-import { HOME_LAYOUTS, LIMITS, LOGO_BACKGROUNDS, NAV_IDS, NAV_LABELS, PRESS_SECTION_LABELS, SOCIAL_PLATFORMS, setupChecklist } from '../assets/lib/settings.mjs';
+import {
+  BAND_PLACES,
+  HALFTONE_COLORS,
+  HALFTONE_PLACES,
+  HOME_LAYOUTS,
+  LIMITS,
+  LOGO_BACKGROUNDS,
+  NAV_IDS,
+  NAV_LABELS,
+  NAV_STYLES,
+  PRESS_SECTION_LABELS,
+  SOCIAL_GROUPS,
+  SOCIAL_PLATFORMS,
+  setupChecklist,
+} from '../assets/lib/settings.mjs';
 import {
   BUTTON_STYLES,
   CARD_STYLES,
@@ -107,7 +121,14 @@ function pages(app) {
   );
   return [
     head('Pages & menu', 'Choose which pages appear in the top menu. Pages that are switched off can still be opened in the preview.'),
-    card('Top menu', null, h('div', { class: 'menu-rows' }, rows)),
+    card('Pages', null, h('div', { class: 'menu-rows' }, rows)),
+    card(
+      'Menu style',
+      'On phones the menu folds into a button in the top-left corner.',
+      select(app, 'nav.style', { label: 'Style', options: NAV_STYLES }),
+      toggle(app, 'nav.dividers', { label: 'Star dividers between menu items' }),
+      toggle(app, 'nav.showSocials', { label: 'Social icons at the end of the menu', help: 'Choose which links appear there under Social links.' })
+    ),
   ];
 }
 
@@ -206,13 +227,6 @@ function home(app) {
             text(app, 'wishlist.buttonLabel', { label: 'Button', maxlength: 40 }),
           ]
         : null
-    ),
-    card(
-      'Social band',
-      'A strip with your social links under the sign-up, like "Follow us on socials".',
-      toggle(app, 'home.socials.enabled', { label: 'Show the social band', rerender: true }),
-      app.get('home.socials.enabled') ? text(app, 'home.socials.heading', { label: 'Heading', maxlength: 80 }) : null,
-      app.get('socials').length ? null : note('Add links under Social links for the band to appear.', 'warn')
     ),
   ];
 }
@@ -479,6 +493,11 @@ function brand(app) {
       }),
       text(app, 'site.copyrightName', { label: 'Copyright name (footer)', maxlength: 80 })
     ),
+    card(
+      'Footer',
+      'One small line at the very bottom: copyright, privacy policy, press kit and contact links.',
+      text(app, 'footer.note', { label: 'Short note (optional)', maxlength: 120, placeholder: 'No cookies, no tracking.' })
+    ),
   ];
 }
 
@@ -577,23 +596,90 @@ function appearance(app) {
 
 // --- socials, privacy, seo, history -----------------------------------------------------------
 
+const PLATFORM_OPTIONS = Object.fromEntries(Object.entries(SOCIAL_GROUPS).map(([group, ids]) => [group, Object.fromEntries(ids.map((id) => [id, SOCIAL_PLATFORMS[id]]))]));
+const URL_HINTS = {
+  steam: 'https://store.steampowered.com/app/…',
+  itch: 'https://yourname.itch.io/…',
+  discord: 'https://discord.gg/…',
+  youtube: 'https://youtube.com/@…',
+  bluesky: 'https://bsky.app/profile/…',
+  x: 'https://x.com/…',
+  tiktok: 'https://tiktok.com/@…',
+  email: 'mailto:you@example.com',
+};
+
 function socials(app) {
+  const list = app.get('socials') ?? [];
+  const filled = list.filter((s) => s.url).length;
   return [
-    head('Social links', 'Shown in the social band on the home page and in the press kit factsheet.'),
+    head('Social links', 'Your links, shown as icons in the top menu, in the "Follow" band at the bottom of every page and in the press kit.'),
     card(
-      null,
-      'For Mastodon verification, links use rel="me".',
+      'Links',
+      filled
+        ? `${filled} of ${list.length} have a link. Links without a URL stay hidden on the live site (the preview shows them faded).`
+        : 'The most common game-dev links are ready to fill in. Paste a URL into the ones you use and remove the rest. Links without a URL stay hidden on the live site.',
       repeater(app, 'socials', {
         max: LIMITS.socials,
         addLabel: 'Add a link',
         empty: 'No social links yet.',
-        itemTitle: (s) => SOCIAL_PLATFORMS[s.platform] ?? s.platform,
-        newItem: () => ({ platform: 'youtube', url: '', label: '' }),
+        itemTitle: (s) => `${SOCIAL_PLATFORMS[s.platform] ?? s.platform}${s.url ? '' : ' · no link yet'}`,
+        newItem: () => ({ platform: 'itch', url: '', label: '', inMenu: true, inBand: true }),
         fields: (p) => [
-          h('div', { class: 'grid-2' }, select(app, `${p}.platform`, { label: 'Platform', options: SOCIAL_PLATFORMS }), text(app, `${p}.label`, { label: 'Label (optional)', maxlength: 40, placeholder: 'Uses the platform name' })),
-          text(app, `${p}.url`, { label: 'URL', type: 'url', placeholder: 'https://…', validate: linkCheck, mono: true }),
+          h(
+            'div',
+            { class: 'grid-2' },
+            select(app, `${p}.platform`, { label: 'Platform', options: PLATFORM_OPTIONS, rerender: true }),
+            text(app, `${p}.label`, { label: 'Label (optional)', maxlength: 40, placeholder: 'Uses the platform name' })
+          ),
+          text(app, `${p}.url`, {
+            label: 'URL',
+            type: 'url',
+            placeholder: URL_HINTS[app.get(`${p}.platform`)] ?? 'https://…',
+            validate: linkCheck,
+            mono: true,
+            rerender: true,
+          }),
+          h('div', { class: 'grid-2' }, toggle(app, `${p}.inMenu`, { label: 'In the top menu' }), toggle(app, `${p}.inBand`, { label: 'In the bottom band' })),
         ],
       })
+    ),
+    card(
+      'Bottom band',
+      'A "Follow us" strip with large icons above the footer.',
+      h('div', { class: 'grid-2' }, select(app, 'socialBand.show', { label: 'Show on', options: BAND_PLACES }), text(app, 'socialBand.heading', { label: 'Heading', maxlength: 80 }))
+    ),
+    note('Mastodon verification works: links use rel="me".', 'info'),
+  ];
+}
+
+function effects(app) {
+  return [
+    head('Effects', 'Retro screen and comic-book effects. Visitors who ask their system for reduced motion get still versions.'),
+    card(
+      'CRT screen',
+      'Scanlines, colour stripes and a faint flicker over the whole site, like an old monitor.',
+      toggle(app, 'effects.crt.enabled', { label: 'CRT effect', rerender: true }),
+      app.get('effects.crt.enabled')
+        ? [
+            range(app, 'effects.crt.scanlines', { label: 'Scanline strength', min: 0, max: 60, unit: '%' }),
+            toggle(app, 'effects.crt.flicker', { label: 'Flicker' }),
+            toggle(app, 'effects.crt.rgbText', { label: 'Red/blue colour split on headings and the menu' }),
+            toggle(app, 'effects.crt.vignette', { label: 'Darker screen edges' }),
+          ]
+        : null
+    ),
+    card(
+      'Comic halftone dots',
+      'A screen of print-style dots that drifts with the mouse and swells around the cursor. With an uploaded home background image, the dots follow the image.',
+      toggle(app, 'effects.halftone.enabled', { label: 'Halftone dots', rerender: true }),
+      app.get('effects.halftone.enabled')
+        ? [
+            h('div', { class: 'grid-2' }, select(app, 'effects.halftone.where', { label: 'Where', options: HALFTONE_PLACES }), select(app, 'effects.halftone.color', { label: 'Dot colour', options: HALFTONE_COLORS })),
+            h('div', { class: 'grid-2' }, range(app, 'effects.halftone.opacity', { label: 'Strength', min: 5, max: 80, unit: '%' }), range(app, 'effects.halftone.size', { label: 'Dot size', min: 6, max: 28, unit: 'px' })),
+            h('div', { class: 'grid-2' }, range(app, 'effects.halftone.angle', { label: 'Screen angle', min: 0, max: 90, unit: '°' }), range(app, 'effects.halftone.mouse', { label: 'Mouse reaction', min: 0, max: 100, unit: '%' })),
+            note('Move the mouse over the preview to try it.', 'info'),
+          ]
+        : null
     ),
   ];
 }
@@ -708,6 +794,7 @@ export const PANELS = [
   { id: 'press', label: 'Press kit', icon: 'press', render: press, page: 'press' },
   { id: 'brand', label: 'Site & brand', icon: 'about', render: brand },
   { id: 'appearance', label: 'Appearance', icon: 'appearance', render: appearance, page: 'home' },
+  { id: 'effects', label: 'Effects', icon: 'effects', render: effects, page: 'home' },
   { id: 'socials', label: 'Social links', icon: 'socials', render: socials, page: 'home' },
   { id: 'privacy', label: 'Privacy & legal', icon: 'privacy', render: privacy, page: 'privacy' },
   { id: 'seo', label: 'SEO & sharing', icon: 'seo', render: seo },

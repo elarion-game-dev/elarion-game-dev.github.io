@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "site": {
     "name": "Elarion",
     "url": "https://elarion-game-dev.github.io",
@@ -19,7 +19,10 @@
     "press": {
       "enabled": true,
       "label": "Press Kit"
-    }
+    },
+    "style": "bar-stepped",
+    "dividers": true,
+    "showSocials": true
   },
   "home": {
     "layout": "about-first",
@@ -30,10 +33,31 @@
       "enabled": true,
       "heading": "About",
       "body": "I'm creating a game about slaying hordes of enemies with absurdly powerful spells. "
-    },
-    "socials": {
+    }
+  },
+  "socialBand": {
+    "show": "all",
+    "heading": "Follow me on socials"
+  },
+  "footer": {
+    "note": "No cookies, no tracking."
+  },
+  "effects": {
+    "crt": {
       "enabled": true,
-      "heading": "Follow me on socials"
+      "scanlines": 22,
+      "flicker": true,
+      "rgbText": true,
+      "vignette": true
+    },
+    "halftone": {
+      "enabled": true,
+      "where": "home",
+      "color": "accent2",
+      "opacity": 30,
+      "size": 11,
+      "angle": 45,
+      "mouse": 60
     }
   },
   "newsletter": {
@@ -226,7 +250,50 @@
     "team": [],
     "contact": "For press enquiries, review copies and interviews, get in touch."
   },
-  "socials": [],
+  "socials": [
+    {
+      "platform": "steam",
+      "url": "",
+      "label": "",
+      "inMenu": true,
+      "inBand": true
+    },
+    {
+      "platform": "discord",
+      "url": "",
+      "label": "",
+      "inMenu": true,
+      "inBand": true
+    },
+    {
+      "platform": "youtube",
+      "url": "",
+      "label": "",
+      "inMenu": true,
+      "inBand": true
+    },
+    {
+      "platform": "bluesky",
+      "url": "",
+      "label": "",
+      "inMenu": true,
+      "inBand": true
+    },
+    {
+      "platform": "x",
+      "url": "",
+      "label": "",
+      "inMenu": true,
+      "inBand": true
+    },
+    {
+      "platform": "tiktok",
+      "url": "",
+      "label": "",
+      "inMenu": true,
+      "inBand": true
+    }
+  ],
   "privacy": {
     "controllerName": "",
     "controllerAddress": "",

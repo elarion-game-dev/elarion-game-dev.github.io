@@ -9,7 +9,8 @@
   --band: light-dark(var(--surface), color-mix(in srgb, var(--bg) 45%, #000));
   --shadow: 0 24px 60px -28px color-mix(in srgb, #000 70%, transparent);
   --container: 1160px;
-  --header-height: 68px;
+  --header-height: 64px;
+  --nav-bg: color-mix(in srgb, var(--bg) 55%, #000);
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   --radius-sm: calc(var(--radius) * 0.7);
 }
@@ -358,24 +359,184 @@ p {
   background: color-mix(in srgb, var(--surface) 35%, transparent);
 }
 
-/* --- header ---------------------------------------------------------------- */
+/* --- header & menu ------------------------------------------------------------ */
+/* Default: a bar hanging from the top edge of the screen, centred (data-nav="bar-stepped" / "bar-rounded").
+   The bar's background lives in ::before so the stepped clip-path doesn't also clip the drop shadow. */
 
 .site-header {
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 50;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.site-header > * {
+  pointer-events: auto;
+}
+
+main {
+  padding-top: var(--header-height);
+}
+
+.page-home main {
+  padding-top: 0;
+}
+
+.nav-bar {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem 1.1rem;
+  max-width: calc(100vw - 2rem);
+  padding: 0.55rem 1.9rem 0.75rem;
+  filter: drop-shadow(0 5px 0 color-mix(in srgb, #000 55%, transparent));
+}
+
+.nav-bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--nav-bg);
+}
+
+[data-nav='bar-stepped'] .nav-bar::before {
+  clip-path: polygon(
+    0 0, 100% 0,
+    100% calc(100% - 18px), calc(100% - 6px) calc(100% - 18px), calc(100% - 6px) calc(100% - 12px),
+    calc(100% - 12px) calc(100% - 12px), calc(100% - 12px) calc(100% - 6px), calc(100% - 18px) calc(100% - 6px),
+    calc(100% - 18px) 100%, 18px 100%,
+    18px calc(100% - 6px), 12px calc(100% - 6px), 12px calc(100% - 12px), 6px calc(100% - 12px),
+    6px calc(100% - 18px), 0 calc(100% - 18px)
+  );
+}
+
+[data-nav='bar-rounded'] .nav-bar::before {
+  border-radius: 0 0 18px 18px;
+}
+
+.nav-links,
+.nav-socials {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem 1.1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nav-socials {
+  gap: 0.25rem 0.55rem;
+}
+
+.nav-link {
+  display: inline-block;
+  padding: 0.3rem 0.1rem;
+  color: var(--accent-2);
+  font-family: var(--font-heading);
+  font-size: 1.02rem;
+  font-weight: var(--heading-weight);
+  letter-spacing: 0.04em;
+  text-transform: var(--heading-case);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.15s, transform 0.15s var(--ease);
+}
+
+.nav-link:hover {
+  color: var(--text);
+  transform: translateY(-1px);
+}
+
+.nav-link[aria-current='page'] {
+  color: var(--text);
+}
+
+.nav-mark .sigil {
+  width: 20px;
+  height: 20px;
+  color: var(--accent);
+}
+
+.nav-divider {
+  display: inline-flex;
+  color: var(--accent);
+}
+
+.nav-divider .sigil {
+  width: 11px;
+  height: 11px;
+}
+
+.nav-links > .nav-divider:nth-child(4n) {
+  color: var(--accent-2);
+}
+
+.nav-divider-socials {
+  color: var(--accent-2);
+}
+
+.nav-socials a {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  color: var(--text);
+  transition: color 0.15s, transform 0.15s var(--ease);
+}
+
+.nav-socials a:hover {
+  color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.nav-socials .icon {
+  width: 20px;
+  height: 20px;
+}
+
+.is-placeholder {
+  opacity: 0.38;
+  outline: 1px dashed currentColor;
+  outline-offset: 2px;
+}
+
+.menu-toggle,
+.menu-close {
+  display: none;
+}
+
+/* Classic: full-width translucent header with the brand on the left. */
+[data-nav='classic'] .site-header {
   background: color-mix(in srgb, var(--bg) 72%, transparent);
   -webkit-backdrop-filter: blur(14px) saturate(140%);
   backdrop-filter: blur(14px) saturate(140%);
   border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
 }
 
-.header-inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+[data-nav='classic'] .nav-bar {
+  width: min(100% - 2.5rem, var(--container));
   min-height: var(--header-height);
+  justify-content: flex-end;
+  padding: 0;
+  filter: none;
+}
+
+[data-nav='classic'] .nav-bar::before {
+  display: none;
+}
+
+[data-nav='classic'] .brand {
+  margin-right: auto;
 }
 
 .brand {
@@ -409,42 +570,6 @@ p {
   border-radius: 6px;
 }
 
-.site-nav {
-  display: flex;
-  align-items: center;
-  gap: clamp(0.25rem, 2vw, 1.75rem);
-  margin-left: auto;
-}
-
-.nav-link {
-  position: relative;
-  padding: 0.5rem 0.25rem;
-  color: var(--muted);
-  font-family: var(--font-heading);
-  font-size: 0.92rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: var(--heading-case);
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.nav-link:hover,
-.nav-link[aria-current='page'] {
-  color: var(--text);
-}
-
-.nav-link[aria-current='page']::after {
-  content: '';
-  position: absolute;
-  left: 0.25rem;
-  right: 0.25rem;
-  bottom: 0.15rem;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--accent);
-}
-
 /* --- home -------------------------------------------------------------------- */
 
 .home-hero {
@@ -453,8 +578,8 @@ p {
   overflow: hidden;
   display: flex;
   align-items: center;
-  min-height: calc(100svh - var(--header-height));
-  padding: clamp(3rem, 8vw, 6rem) 0;
+  min-height: 100svh;
+  padding: calc(var(--header-height) + clamp(1.5rem, 5vw, 3.5rem)) 0 clamp(3rem, 8vw, 6rem);
 }
 
 .hero-bg,
@@ -1363,60 +1488,141 @@ label.consent {
   justify-content: center;
 }
 
-/* --- footer ---------------------------------------------------------------- */
+/* --- footer: one small line ------------------------------------------------------ */
 
 .site-footer {
-  padding: 2.75rem 0 2.25rem;
-  border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  padding: 0.85rem 0;
+  border-top: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
   background: var(--band);
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
 }
 
 main:has(> .social-band:last-child) + .site-footer {
-  border-top-color: transparent;
+  border-top-color: color-mix(in srgb, var(--text) 6%, transparent);
 }
 
 .footer-inner {
-  display: grid;
-  justify-items: center;
-  gap: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem 1.4rem;
   text-align: center;
-}
-
-.footer-inner .brand {
-  font-size: calc(1.05rem * max(var(--heading-scale), 0.7));
 }
 
 .footer-nav {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.4rem 1.5rem;
+  gap: 0.3rem 1rem;
 }
 
 .footer-nav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.footer-nav a:hover {
   color: var(--text);
+  text-decoration: underline;
 }
 
+.copyright,
 .footer-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
   margin: 0;
-  font-size: 0.82rem;
 }
 
-.footer-note .icon {
-  width: 15px;
-  height: 15px;
-  margin-top: 0.15em;
-  color: var(--accent);
+/* --- CRT screen effect ---------------------------------------------------------- */
+/* Scanlines, RGB phosphor stripes and an optional vignette over the whole page, a faint flicker and a
+   red/blue split on headings. Purely decorative: the overlay never catches clicks. */
+
+[data-crt-vignette] {
+  --crt-vignette: radial-gradient(ellipse 125% 95% at 50% 50%, transparent 58%, rgb(0 0 0 / 0.5) 100%);
 }
 
-.copyright {
-  margin: 0;
-  font-size: 0.82rem;
+[data-crt] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  background:
+    var(--crt-vignette, linear-gradient(transparent, transparent)),
+    linear-gradient(rgb(18 16 16 / 0) 50%, rgb(0 0 0 / var(--crt-scanlines, 0.2)) 50%) 0 0 / 100% 3px,
+    linear-gradient(90deg, rgb(255 0 0 / 0.06), rgb(0 255 0 / 0.02), rgb(0 0 255 / 0.06)) 0 0 / 3px 100%;
+}
+
+[data-crt-flicker] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 81;
+  pointer-events: none;
+  background: rgb(18 16 16 / 0.1);
+  opacity: 0;
+  will-change: opacity; /* own compositor layer: the flicker never repaints the page */
+  animation: crt-flicker 0.15s infinite;
+}
+
+[data-crt-rgb] :is(h1, h2, h3, .nav-link, .btn-submit .btn-label) {
+  animation: crt-rgb 1.6s infinite;
+}
+
+@keyframes crt-flicker {
+  0% { opacity: 0.28; }
+  10% { opacity: 0.24; }
+  20% { opacity: 0.18; }
+  30% { opacity: 0.36; }
+  40% { opacity: 0.27; }
+  50% { opacity: 0.56; }
+  55% { opacity: 0.09; }
+  60% { opacity: 0.2; }
+  70% { opacity: 0.23; }
+  80% { opacity: 0.41; }
+  90% { opacity: 0.4; }
+  100% { opacity: 0.24; }
+}
+
+@keyframes crt-rgb {
+  0% { text-shadow: 0.44px 0 1px rgb(0 30 255 / 0.5), -0.44px 0 1px rgb(255 0 80 / 0.3), 0 0 3px; }
+  5% { text-shadow: 2.79px 0 1px rgb(0 30 255 / 0.5), -2.79px 0 1px rgb(255 0 80 / 0.3), 0 0 3px; }
+  10% { text-shadow: 0.03px 0 1px rgb(0 30 255 / 0.5), -0.03px 0 1px rgb(255 0 80 / 0.3), 0 0 3px; }
+  20% { text-shadow: 3.48px 0 1px rgb(0 30 255 / 0.5), -3.48px 0 1px rgb(255 0 80 / 0.3), 0 0 3px; }
+  25% { text-shadow: 1.61px 0 1px rgb(0 30 255 / 0.5), -1.61px 0 1px rgb(255 0 80 / 0.3), 0 0 3px; }
+  35% { text-shadow: 0.8px 0 1px rgb(0 30 255 / 0.5), -0.8px 0 1px rgb(255 0 80 / 0.3), 0 0 3px; }
+  45% { text-shadow: 2.23px 0 1px rgb(0 30 255 / 0.5), -2.23px 0 1px rgb(255 0 80 / 0.3), 0 0 3px; }
+  50% { text-shadow: 0.08px 0 1px rgb(0 30 255 / 0.5), -0.08px 0 1px rgb(255 0 80 / 0.3), 0 0 3px; }
+  60% { text-shadow: 2.2px 0 1px rgb(0 30 255 / 0.5), -2.2px 0 1px rgb(255 0 80 / 0.3), 0 0 3px; }
+  70% { text-shadow: 0.49px 0 1px rgb(0 30 255 / 0.5), -0.49px 0 1px rgb(255 0 80 / 0.3), 0 0 3px; }
+  80% { text-shadow: 0.08px 0 1px rgb(0 30 255 / 0.5), -0.08px 0 1px rgb(255 0 80 / 0.3), 0 0 3px; }
+  90% { text-shadow: 2.2px 0 1px rgb(0 30 255 / 0.5), -2.2px 0 1px rgb(255 0 80 / 0.3), 0 0 3px; }
+  100% { text-shadow: 2.62px 0 1px rgb(0 30 255 / 0.5), -2.62px 0 1px rgb(255 0 80 / 0.3), 0 0 3px; }
+}
+
+/* --- halftone dots ------------------------------------------------------------------ */
+
+.halftone {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: var(--halftone-opacity, 0.3);
+  pointer-events: none;
+}
+
+.halftone-fixed {
+  position: fixed;
+  z-index: -1;
+}
+
+@media print {
+  [data-crt] body::before,
+  [data-crt-flicker] body::after,
+  .halftone {
+    display: none;
+  }
 }
 
 /* --- responsive -------------------------------------------------------------- */
@@ -1431,17 +1637,113 @@ main:has(> .social-band:last-child) + .site-footer {
   }
 }
 
-@media (max-width: 520px) {
-  .container {
-    width: calc(100% - 2rem);
+/* Phones: a menu button in the top-left corner opens a full-screen menu.
+   Without JavaScript the button links to #site-menu and :target opens it. */
+@media (max-width: 760px) {
+  .site-header {
+    justify-content: flex-start;
+    padding: 12px 16px;
   }
 
-  .site-header .brand-name {
+  [data-nav='classic'] .site-header {
+    background: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border: 0;
+  }
+
+  .menu-toggle,
+  .menu-close {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border-radius: var(--radius-sm);
+    background: var(--nav-bg);
+    color: var(--accent-2);
+    box-shadow: 0 4px 0 color-mix(in srgb, #000 55%, transparent);
+  }
+
+  .menu-toggle .icon,
+  .menu-close .icon {
+    width: 26px;
+    height: 26px;
+  }
+
+  .nav-bar,
+  [data-nav='classic'] .nav-bar {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
     display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2rem;
+    width: auto;
+    max-width: none;
+    padding: 5rem 1.5rem;
+    filter: none;
+  }
+
+  .nav-bar::before,
+  [data-nav='classic'] .nav-bar::before {
+    display: block;
+    clip-path: none !important;
+    border-radius: 0;
+    background: var(--nav-bg);
+  }
+
+  /* Phones have little room beside the text, so the dots stay softer. */
+  .halftone {
+    opacity: calc(var(--halftone-opacity, 0.3) * 0.65);
+  }
+
+  .nav-bar:target,
+  .nav-bar.is-open {
+    display: flex;
+  }
+
+  [data-nav='classic'] .brand {
+    margin: 0;
+  }
+
+  .nav-links {
+    flex-direction: column;
+    gap: 0.6rem;
   }
 
   .nav-link {
-    font-size: 0.85rem;
+    font-size: 1.7rem;
+  }
+
+  .nav-divider-socials {
+    display: none;
+  }
+
+  .nav-socials a {
+    width: 46px;
+    height: 46px;
+  }
+
+  .nav-socials .icon {
+    width: 26px;
+    height: 26px;
+  }
+
+  .menu-close {
+    position: absolute;
+    top: 12px;
+    left: 16px;
+  }
+
+  html.menu-open {
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 520px) {
+  .container {
+    width: calc(100% - 2rem);
   }
 
   [data-form='inline'] .field-row {

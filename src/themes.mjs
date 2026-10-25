@@ -269,7 +269,7 @@ export function preloadFont(fontId) {
   return face ? face.latin : '';
 }
 
-export function themeCss(theme, { fontBase = '/assets/fonts/', imageUrl } = {}) {
+export function themeCss(theme, { fontBase = '/assets/fonts/', imageUrl, effects } = {}) {
   const c = theme.colors;
   const heading = FONTS[theme.headingFont] ?? FONTS.system;
   const heroImage = imageUrl ?? safeAssetPath(theme.heroImage);
@@ -297,7 +297,13 @@ ${faces.join('\n')}
   --radius: ${theme.radius}px;
   --hero-overlay: ${(theme.heroOverlay / 100).toFixed(2)};
   --hero-blur: ${theme.heroBlur}px;
-  --hero-image: ${heroImage ? `url('${heroImage}')` : 'none'};
+  --hero-image: ${heroImage ? `url('${heroImage}')` : 'none'};${
+    effects
+      ? `
+  --crt-scanlines: ${(effects.crt.scanlines / 100).toFixed(2)};
+  --halftone-opacity: ${(effects.halftone.opacity / 100).toFixed(2)};`
+      : ''
+  }
 }
 `;
 }

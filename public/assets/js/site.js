@@ -1,5 +1,8 @@
 // Newsletter sign-up, as progressive enhancement: without JavaScript the form still posts straight to the provider.
 // Nothing is stored in the browser (no cookies, no localStorage) and the email address is never logged.
+// Also: the halftone dot background and the mobile menu.
+
+import { startHalftoneFromMarkup } from './halftone.js';
 
 const MIN_FILL_MS = 1500; // humans take longer than this to type an address and tick the box
 const MAX_ATTEMPTS = 4; // per minute, per page load
@@ -158,3 +161,42 @@ function enhance(form) {
 }
 
 document.querySelectorAll('form[data-subscribe]').forEach(enhance);
+
+// --- mobile menu -------------------------------------------------------------------
+// Without JavaScript the toggle is a link to #site-menu and CSS opens the menu with :target.
+
+function enhanceMenu(toggle) {
+  const menu = document.getElementById(toggle.getAttribute('aria-controls'));
+  if (!menu) return;
+  const closeLink = menu.querySelector('.menu-close');
+  const setOpen = (open) => {
+    menu.classList.toggle('is-open', open);
+    toggle.setAttribute('aria-expanded', String(open));
+    document.documentElement.classList.toggle('menu-open', open);
+    if (open) menu.querySelector('a')?.focus();
+  };
+  toggle.addEventListener('click', (event) => {
+    event.preventDefault();
+    setOpen(!menu.classList.contains('is-open'));
+  });
+  closeLink?.addEventListener('click', (event) => {
+    event.preventDefault();
+    setOpen(false);
+    toggle.focus();
+  });
+  menu.addEventListener('click', (event) => {
+    if (event.target.closest('a:not(.menu-close)')) setOpen(false);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && menu.classList.contains('is-open')) {
+      setOpen(false);
+      toggle.focus();
+    }
+  });
+}
+
+document.querySelectorAll('.menu-toggle[aria-controls]').forEach(enhanceMenu);
+
+// --- halftone dots ---------------------------------------------------------------------
+
+document.querySelectorAll('canvas[data-halftone]').forEach((canvas) => startHalftoneFromMarkup(canvas));
