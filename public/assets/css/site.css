@@ -764,6 +764,8 @@ label.consent {
   align-items: center;
   justify-content: center;
   gap: 0.8rem;
+  max-width: 460px; /* same width as the form that replaces it */
+  margin-inline: auto;
   padding: 1.1rem 1.2rem;
   border: 1px dashed color-mix(in srgb, var(--accent) 50%, transparent);
   border-radius: var(--radius-sm);
