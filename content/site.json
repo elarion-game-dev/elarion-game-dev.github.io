@@ -22,7 +22,17 @@
     },
     "style": "bar-stepped",
     "dividers": true,
-    "showSocials": true
+    "showSocials": true,
+    "look": {
+      "background": "auto",
+      "opacity": 100,
+      "linkColor": "auto",
+      "activeColor": "auto",
+      "iconColor": "auto",
+      "dividerColor": "auto",
+      "size": 100,
+      "shadow": "drop"
+    }
   },
   "home": {
     "layout": "about-first",
@@ -62,9 +72,9 @@
     }
   },
   "newsletter": {
-    "provider": "none",
+    "provider": "kit",
     "kit": {
-      "formId": ""
+      "formId": "10101309"
     },
     "mailerlite": {
       "accountId": "",
