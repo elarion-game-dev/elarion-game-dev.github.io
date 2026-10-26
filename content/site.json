@@ -55,7 +55,7 @@
   },
   "effects": {
     "crt": {
-      "enabled": true,
+      "enabled": false,
       "scanlines": 7,
       "flicker": true,
       "rgbText": true,
