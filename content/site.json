@@ -46,7 +46,7 @@
   "effects": {
     "crt": {
       "enabled": true,
-      "scanlines": 22,
+      "scanlines": 10,
       "flicker": true,
       "rgbText": true,
       "vignette": true
@@ -143,7 +143,7 @@
     "hook": {
       "font": "",
       "weight": 0,
-      "size": 100,
+      "size": 95,
       "case": "default",
       "color": "default",
       "customColor": "#ffffff",
