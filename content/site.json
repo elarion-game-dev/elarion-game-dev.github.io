@@ -107,7 +107,7 @@
     "buttonLabel": "Subscribe",
     "trustText": "",
     "requireConsent": false,
-    "consentText": "By subscribing you agree to receive the Elarion newsletter. See the {privacy}.",
+    "consentText": "",
     "successTitle": "Almost there! Check your inbox.",
     "successBody": "I've sent you a confirmation link. Click it to finish subscribing. Nothing there after a few minutes? Check your spam folder.",
     "closedMessage": "Sign-ups open very soon. Check back in a day or two!",
