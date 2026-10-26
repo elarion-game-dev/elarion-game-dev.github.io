@@ -280,8 +280,10 @@ function home(app) {
         multiline: true,
         rows: 2,
         maxlength: 400,
-        help: 'Write {privacy} where the link to the privacy policy should go.',
-        validate: (v) => (v.includes('{privacy}') ? '' : 'Tip: include {privacy} so people can read the policy.'),
+        help: app.get('newsletter.requireConsent')
+          ? 'Write {privacy} where the link to the privacy policy should go.'
+          : 'Write {privacy} where the link to the privacy policy should go. Leave empty to show nothing under the form.',
+        validate: (v) => (!v || v.includes('{privacy}') ? '' : 'Tip: include {privacy} so people can read the policy.'),
       })
     ),
     card(

@@ -374,7 +374,9 @@ function signup(settings, ctx) {
       ${
         nl.requireConsent
           ? `<label class="consent"><input type="checkbox" required data-consent><span>${consentHtml(nl)}</span></label>`
-          : `<p class="consent consent-text">${consentHtml(nl)}</p>`
+          : nl.consentText
+            ? `<p class="consent consent-text"${edit(ctx, 'newsletter.consentText')}>${consentHtml(nl)}</p>`
+            : ''
       }
       <p class="form-status" role="status" aria-live="polite" data-status></p>
     </form>`
@@ -398,8 +400,8 @@ function signupBox(settings, ctx) {
   <div class="container narrow">
     <div class="signup-box card" id="subscribe">
       <h2 id="signup-box-title" class="signup-hook"${edit(ctx, 'newsletter.heading')}>${esc(settings.newsletter.heading)}</h2>
-      ${perks(settings, ctx)}
       ${signup(settings, ctx)}
+      ${perks(settings, ctx)}
     </div>
   </div>
 </section>`;
@@ -429,8 +431,8 @@ function homePage(settings, ctx) {
   const signupBlock = `<section class="home-block home-signup" id="subscribe" aria-labelledby="signup-title">
       <h2 id="signup-title" class="signup-hook"${edit(ctx, 'newsletter.heading')}>${esc(nl.heading)}</h2>
       ${nl.body ? `<div class="prose signup-body"${edit(ctx, 'newsletter.body')}>${markdown(nl.body)}</div>` : ''}
-      ${perks(settings, ctx)}
       ${signup(settings, ctx)}
+      ${perks(settings, ctx)}
     </section>`;
 
   // The inline "Follow" block always comes straight after the sign-up form.

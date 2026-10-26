@@ -405,7 +405,8 @@ export function normalizeSettings(input) {
       buttonLabel: required(nl.buttonLabel, 40, d.newsletter.buttonLabel),
       trustText: line(nl.trustText, 300, d.newsletter.trustText),
       requireConsent: bool(nl.requireConsent, d.newsletter.requireConsent),
-      consentText: required(nl.consentText, 400, d.newsletter.consentText),
+      // Blank hides the statement under the form; the checkbox always needs words.
+      consentText: (bool(nl.requireConsent, d.newsletter.requireConsent) ? required : line)(nl.consentText, 400, d.newsletter.consentText),
       successTitle: required(nl.successTitle, 100, d.newsletter.successTitle),
       successBody: str(nl.successBody, 500, d.newsletter.successBody),
       closedMessage: line(nl.closedMessage, 200, d.newsletter.closedMessage),

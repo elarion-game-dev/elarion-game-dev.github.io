@@ -667,7 +667,7 @@ main {
   flex-wrap: wrap;
   justify-content: center;
   gap: 0.5rem 1.4rem;
-  margin: 0 0 1.8rem;
+  margin: 1.4rem 0 0;
   padding: 0;
   list-style: none;
   color: color-mix(in srgb, var(--text) 85%, var(--muted));

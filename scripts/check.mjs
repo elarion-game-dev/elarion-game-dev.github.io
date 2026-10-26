@@ -165,6 +165,11 @@ await test('Sign-up form: one email field, consent statement or unticked checkbo
   assert.match(statement, /<p class="consent consent-text">.*privacy policy/);
   const checkbox = normalizeSettings(withKit({ ...DEFAULT_SETTINGS, newsletter: { ...DEFAULT_SETTINGS.newsletter, requireConsent: true } }));
   assert.match(renderSite(checkbox, { version: 'v' })['index.html'], /<input type="checkbox" required data-consent>/);
+  const blank = { ...DEFAULT_SETTINGS.newsletter, trustText: '', consentText: '' };
+  const bare = renderSite(normalizeSettings(withKit({ ...DEFAULT_SETTINGS, newsletter: blank })), { version: 'v' })['index.html'];
+  assert.ok(!/class="(trust|consent)/.test(bare), 'blank lines render nothing');
+  const forced = normalizeSettings(withKit({ ...DEFAULT_SETTINGS, newsletter: { ...blank, requireConsent: true } }));
+  assert.equal(forced.newsletter.consentText, DEFAULT_SETTINGS.newsletter.consentText, 'the checkbox keeps its words');
 });
 
 await test('Without a provider the form is replaced by a notice', () => {
