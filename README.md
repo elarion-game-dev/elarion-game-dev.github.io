@@ -39,8 +39,12 @@ Kit is free for up to 10,000 subscribers. The admin's **Email provider** panel h
 
 1. Create a Kit account and an inline form.
 2. Turn on double opt-in ("Send incentive email") and set the redirect after confirming to `https://elarion-game-dev.github.io/confirmed/`. That page thanks them and shows the Steam button.
-3. Copy the form ID into the admin and publish.
-4. Add your mailing address in Kit (anti-spam laws require it in every email footer; Kit adds it for you).
+3. Fill in **Privacy & legal** (your name or company, country, contact email) so the privacy policy says who collects the addresses.
+4. Copy the form ID into the admin and publish.
+5. Add your sender name, sender email and mailing address in Kit (anti-spam laws require an address in every email footer; Kit adds it for you).
+6. Once you own a domain, authenticate it in Kit and send from it.
+
+Kit's CAPTCHA can't be switched off. It only appears for sign-ups that look suspicious, and the form then shows a "complete the quick check" link. Incognito windows and repeated test sign-ups trigger it, so test in a normal window.
 
 Until a provider is connected, the form shows a "coming soon" message instead of collecting anything. Add your Steam store link under **Home page → After sign-up**; until then the Steam button only appears in the preview.
 

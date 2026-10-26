@@ -315,10 +315,12 @@ const GUIDES = {
   kit: (siteUrl) => [
     h('span', {}, 'Create a free account at ', link('https://kit.com', 'kit.com'), '.'),
     h('span', {}, 'Go to ', h('strong', {}, 'Grow → Landing Pages & Forms → Create new → Form → Inline'), ' and pick any template (its design is not used; this site draws its own form).'),
-    h('span', {}, "In the form's ", h('strong', {}, 'Settings → Incentive'), ', turn on ', h('strong', {}, 'Send incentive email'), '. This is double opt-in: people must click a link in their inbox before they are subscribed.'),
+    h('span', {}, "In the form's ", h('strong', {}, 'Settings → Incentive'), ', turn on ', h('strong', {}, 'Send incentive email'), '. This is double opt-in: people must click a link in their inbox before they are subscribed. Edit that email\'s subject and text so it sounds like you.'),
     h('span', {}, 'Set the redirect after confirming to ', code(`${siteUrl}/confirmed/`), ' so new subscribers land on your welcome page (with the Steam button).'),
     h('span', {}, 'Press ', h('strong', {}, 'Publish → HTML'), '. The Form ID is the number in ', code('app.kit.com/forms/1234567/subscriptions'), '. Paste it below.'),
-    h('span', {}, "In Kit's account settings, add your sender name and mailing address. Anti-spam laws (CAN-SPAM) require an address in every email footer; Kit adds it automatically."),
+    h('span', {}, "In Kit's account settings, add your sender name, sender email and mailing address. Anti-spam laws (CAN-SPAM) require an address in every email footer; Kit adds it automatically. A PO box or virtual mailbox is fine if you'd rather not publish your home address."),
+    h('span', {}, "Once you own a domain, authenticate it in Kit's email settings and send from an address on it. Emails from your own domain reach inboxes more reliably, and your sender reputation moves with you if you ever change provider."),
+    h('span', {}, "Kit's CAPTCHA can't be switched off. It only appears for sign-ups that look suspicious; the form then shows a \"complete the quick check\" link. Private/incognito windows and many sign-ups in a row from one connection trigger it, so test in a normal window."),
   ],
   mailerlite: (siteUrl) => [
     h('span', {}, 'Create an account at ', link('https://www.mailerlite.com', 'mailerlite.com'), ' and create an ', h('strong', {}, 'embedded form'), ' (Forms → Embedded forms).'),
@@ -343,6 +345,8 @@ function newsletter(app) {
   const provider = resolveProvider(s.newsletter);
   const def = PROVIDERS[id] ?? PROVIDERS.none;
   const options = Object.fromEntries(Object.entries(PROVIDERS).map(([key, p]) => [key, p.label]));
+  // The privacy policy must say who collects the addresses before the form goes live.
+  const legalTodo = setupChecklist(s, provider).filter((c) => !c.done && !c.optional && c.panel === 'privacy');
 
   return [
     head('Email provider', 'Your provider stores the subscriber list and sends the emails. Subscriber addresses never touch this site.'),
@@ -366,6 +370,9 @@ function newsletter(app) {
         : provider.ready
           ? note(`Connected. Sign-ups are sent to ${provider.name}. Publish, then try subscribing yourself to test it.`, 'ok')
           : note(`Still needed: ${provider.missing.join(', ')}.`, 'warn'),
+      id !== 'none' && legalTodo.length
+        ? note(`Before you publish the form, finish this under Privacy & legal: ${legalTodo.map((c) => c.title.toLowerCase()).join(' and ')}. The privacy policy has to say who collects the addresses.`, 'warn')
+        : null,
       GUIDES[id] ? h('details', { class: 'guide', open: !provider.ready }, h('summary', {}, `How to set up ${def.short ?? def.label}`), steps(GUIDES[id](app.siteUrl))) : null
     ),
     card('While not connected', null, text(app, 'newsletter.closedMessage', { label: '"Coming soon" message', maxlength: 200 })),
