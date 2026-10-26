@@ -630,6 +630,67 @@ body:has(.shell) {
   font-weight: 600;
 }
 
+/* "Revert" sits at the top right of a changed field and puts the published value back. */
+.field.has-revert {
+  position: relative;
+}
+
+.field.has-revert > .field-label {
+  padding-right: 4.5rem;
+}
+
+.revert-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--warn);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.has-revert > .revert-btn {
+  position: absolute;
+  top: -0.15rem;
+  right: 0;
+}
+
+.field-toggle.has-revert > .switch {
+  padding-right: 4.5rem;
+}
+
+/* Fields without a label row (the section list) show it underneath instead. */
+.field.has-revert:not(:has(> .field-label, > .switch)) > .revert-btn {
+  position: static;
+  justify-self: start;
+}
+
+.revert-btn .icon {
+  width: 13px;
+  height: 13px;
+}
+
+.revert-btn:hover {
+  border-color: var(--border);
+  background: var(--panel-2);
+}
+
+.repeater-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.undo-group {
+  display: flex;
+  gap: 2px;
+}
+
 .field-help {
   color: var(--muted);
   font-size: 0.8rem;

@@ -821,7 +821,7 @@ export function renderSite(settings, opts = {}) {
   for (const id of pages) files[pageInfo(s, id).file] = renderPage(s, id, opts);
   if (s.nav.news.enabled) files['news/feed.xml'] = rssFeed(s);
 
-  files['assets/css/theme.css'] = themeCss(s.theme, { effects: s.effects, textStyles: s.textStyles, perkIcon: perkCss(s) });
+  files['assets/css/theme.css'] = themeCss(s.theme, { effects: s.effects, textStyles: s.textStyles, perkIcon: perkCss(s), nav: s.nav.look });
   files['assets/img/favicon.svg'] = faviconSvg(s.theme.colors.accent);
 
   const today = ctx.now.toISOString().slice(0, 10);

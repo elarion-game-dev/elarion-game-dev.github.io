@@ -29,6 +29,8 @@ import {
   FORM_LAYOUTS,
   HEADING_CASES,
   HERO_BACKGROUNDS,
+  NAV_COLORS,
+  NAV_SHADOWS,
   PRESETS,
   TEXT_CASES,
   TEXT_COLORS,
@@ -37,7 +39,7 @@ import {
   contrastReport,
 } from '../assets/lib/themes.mjs';
 import { isEmail, safeUrl, slugify } from '../assets/lib/util.mjs';
-import { card, code, color, h, icon, image, link, note, range, repeater, sectionList, select, stringList, steps, text, toggle } from './ui.js';
+import { card, code, color, colorChoice, h, icon, image, link, note, range, repeater, revert, sectionList, select, stringList, steps, text, toggle } from './ui.js';
 
 const httpsOnly = (v) => (safeUrl(v, { allowMailto: false, allowRelative: false }).startsWith('https://') ? '' : 'Must be a full https:// address.');
 const linkCheck = (v) => (safeUrl(v) ? '' : 'Use a full https:// address, a mailto: link or a path like /press/.');
@@ -108,6 +110,19 @@ function overview(app) {
 
 // --- pages & menu -----------------------------------------------------------------------
 
+function menuLook(app) {
+  const p = 'nav.look';
+  return card(
+    'Menu appearance',
+    'Colours, size and shadow of the top menu bar. The font and boldness of its links are under Text styles → Menu links.',
+    h('div', { class: 'grid-2' }, colorChoice(app, `${p}.background`, { label: 'Bar colour', options: NAV_COLORS, fallback: '#101828' }), range(app, `${p}.opacity`, { label: 'Bar opacity', min: 30, max: 100, unit: '%' })),
+    h('div', { class: 'grid-2' }, colorChoice(app, `${p}.linkColor`, { label: 'Links', options: NAV_COLORS }), colorChoice(app, `${p}.activeColor`, { label: 'Current page and hover', options: NAV_COLORS })),
+    h('div', { class: 'grid-2' }, colorChoice(app, `${p}.iconColor`, { label: 'Social icons', options: NAV_COLORS }), colorChoice(app, `${p}.dividerColor`, { label: 'Star dividers', options: NAV_COLORS })),
+    h('div', { class: 'grid-2' }, range(app, `${p}.size`, { label: 'Size', min: 70, max: 160, step: 5, unit: '%', help: 'Phones always get the full-screen menu.' }), select(app, `${p}.shadow`, { label: 'Shadow', options: NAV_SHADOWS })),
+    h('div', { class: 'button-row' }, h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: () => app.goto('text') }, icon('type'), 'Menu link font'))
+  );
+}
+
 function pages(app) {
   const rows = NAV_IDS.map((id) =>
     h(
@@ -137,6 +152,7 @@ function pages(app) {
       toggle(app, 'nav.dividers', { label: 'Star dividers between menu items' }),
       toggle(app, 'nav.showSocials', { label: 'Social icons at the end of the menu', help: 'Choose which links appear there under Social links.' })
     ),
+    menuLook(app),
   ];
 }
 
@@ -157,8 +173,9 @@ function perkIconPicker(app) {
   };
   return h(
     'div',
-    { class: 'field' },
+    { class: 'field has-revert' },
     h('span', { class: 'field-label' }, 'Icon in front of each perk'),
+    revert(app, 'newsletter.perkIcon'),
     h(
       'div',
       { class: 'icon-picker' },
@@ -618,6 +635,7 @@ function appearance(app) {
     head('Appearance', 'Pick a starting point, then fine-tune colours, fonts, buttons and the background.'),
     card('Theme presets', 'Applying a preset replaces the colours, fonts, heading style, button style, background and card style.', h('div', { class: 'presets' }, presetCards)),
     card('Colours', null, h('div', { class: 'grid-2' }, colorFields), h('h4', { class: 'subhead' }, 'Readability (WCAG AA)'), report),
+    menuLook(app),
     card(
       'Typography',
       'All fonts are hosted on this site; nothing is loaded from Google Fonts.',

@@ -48,8 +48,17 @@ const app = {
 
   get: (path) => getPath(app.settings, path),
   set(path, value) {
+    remember(path);
     setPath(app.settings, path, value);
     changed();
+  },
+  /** Put one setting back to its published value. */
+  revert(path) {
+    // Always its own undo step, never merged with typing in the same field.
+    lastEdit = { path: '', time: 0 };
+    app.set(path, structuredClone(getPath(savedSettings(), path)));
+    lastEdit = { path: '', time: 0 };
+    app.rerender();
   },
   normalized: () => normalizeSettings(app.settings),
   rerender: () => renderPanel(),
@@ -99,6 +108,60 @@ const app = {
 };
 
 const ui = {};
+
+// --- undo / redo ---------------------------------------------------------------------------
+// Snapshots of the whole draft. Typing in one field within a short pause counts as one step.
+
+const UNDO_LIMIT = 200;
+const undoStack = [];
+const redoStack = [];
+let lastEdit = { path: '', time: 0 };
+
+function remember(path = '') {
+  const now = Date.now();
+  const sameEdit = path && path === lastEdit.path && now - lastEdit.time < 1000;
+  lastEdit = { path, time: now };
+  if (sameEdit) return;
+  undoStack.push(JSON.stringify(app.settings));
+  if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+  redoStack.length = 0;
+}
+
+function step(from, to) {
+  if (!from.length || app.publishing) return;
+  to.push(JSON.stringify(app.settings));
+  app.settings = JSON.parse(from.pop());
+  lastEdit = { path: '', time: 0 };
+  const focused = document.activeElement?.dataset?.path;
+  changed();
+  renderPanel();
+  if (focused) ui.editor.querySelector(`[data-path="${CSS.escape(focused)}"]`)?.focus({ preventScroll: true });
+}
+
+const undo = () => step(undoStack, redoStack);
+const redo = () => step(redoStack, undoStack);
+
+let savedCache = { json: '', settings: null };
+function savedSettings() {
+  if (savedCache.json !== app.savedJson) savedCache = { json: app.savedJson, settings: JSON.parse(app.savedJson) };
+  return savedCache.settings;
+}
+
+/** Show each field's revert button only while its value differs from the published one. */
+function updateReverts() {
+  if (!ui.editor) return;
+  const buttons = ui.editor.querySelectorAll('[data-revert]');
+  if (!buttons.length) return;
+  const now = app.normalized();
+  const saved = savedSettings();
+  for (const button of buttons) {
+    const path = button.dataset.revert;
+    const before = getPath(saved, path);
+    const differs = JSON.stringify(getPath(now, path)) !== JSON.stringify(before);
+    button.hidden = !differs;
+    if (differs) button.title = before === undefined ? 'Remove: this was not published' : `Back to the published value${typeof before === 'object' ? '' : `: ${String(before).slice(0, 60) || '(empty)'}`}`;
+  }
+}
 
 // --- token storage ---------------------------------------------------------------------
 
@@ -261,6 +324,8 @@ function showWorkspace() {
   ui.dot = h('span', { class: 'status-dot' });
   ui.deploy = h('a', { class: 'deploy-pill', target: '_blank', rel: 'noopener noreferrer', dataset: { state: 'idle' } }, h('span', { class: 'deploy-dot' }), h('span', { class: 'deploy-text' }, ''));
   ui.publish = h('button', { type: 'button', class: 'btn btn-primary', onclick: () => publish() }, 'Publish');
+  ui.undo = h('button', { type: 'button', class: 'icon-btn', title: 'Undo (Ctrl+Z)', 'aria-label': 'Undo', onclick: undo }, icon('undo'));
+  ui.redo = h('button', { type: 'button', class: 'icon-btn', title: 'Redo (Ctrl+Shift+Z)', 'aria-label': 'Redo', onclick: redo }, icon('redo'));
   ui.discard = h('button', { type: 'button', class: 'btn btn-ghost', onclick: discard }, 'Discard');
   ui.nav = h('nav', { class: 'sidebar', 'aria-label': 'Settings sections' });
   ui.editor = h('main', { class: 'editor', id: 'editor', tabindex: '-1' });
@@ -321,6 +386,7 @@ function showWorkspace() {
       'div',
       { class: 'topbar-actions' },
       h('button', { type: 'button', class: 'btn btn-ghost preview-open', onclick: () => togglePreview(true) }, icon('eye'), 'Preview'),
+      h('div', { class: 'undo-group' }, ui.undo, ui.redo),
       ui.discard,
       ui.publish,
       account
@@ -359,6 +425,7 @@ function renderPanel() {
   const scroll = ui.editor.scrollTop;
   ui.editor.replaceChildren(h('div', { class: 'panel' }, panel.render(app)));
   ui.editor.scrollTop = scroll;
+  updateReverts();
 }
 
 function togglePreview(show) {
@@ -375,6 +442,7 @@ function isDirty() {
 let previewTimer;
 function changed() {
   updateStatus();
+  updateReverts();
   clearTimeout(previewTimer);
   previewTimer = setTimeout(renderPreview, 120);
 }
@@ -385,6 +453,8 @@ function updateStatus() {
   ui.status.textContent = app.publishing ? 'Publishing…' : dirty ? 'Unpublished changes' : 'Everything is published';
   ui.publish.disabled = app.publishing || !dirty;
   ui.discard.hidden = !dirty || app.publishing;
+  ui.undo.disabled = app.publishing || !undoStack.length;
+  ui.redo.disabled = app.publishing || !redoStack.length;
   document.title = `${dirty ? '• ' : ''}${app.settings.site.name || 'Site'} · Admin`;
 }
 
@@ -393,15 +463,23 @@ window.addEventListener('beforeunload', (event) => {
 });
 
 window.addEventListener('keydown', (event) => {
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's' && app.settings) {
+  if (!(event.ctrlKey || event.metaKey) || !app.settings || !ui.editor) return;
+  const key = event.key.toLowerCase();
+  if (key === 's') {
     event.preventDefault();
     publish();
+  } else if (key === 'z' || key === 'y') {
+    // The admin's own history replaces the browser's per-field undo, so every kind of control behaves the same.
+    event.preventDefault();
+    if (key === 'y' || event.shiftKey) redo();
+    else undo();
   }
 });
 
 async function discard() {
-  const choice = await confirmDialog({ title: 'Discard unpublished changes?', body: 'The editor goes back to what is currently published.', confirm: 'Discard', danger: true });
+  const choice = await confirmDialog({ title: 'Discard unpublished changes?', body: 'The editor goes back to what is currently published. Undo (Ctrl+Z) brings your changes back.', confirm: 'Discard', danger: true });
   if (choice !== 'ok') return;
+  remember();
   app.settings = JSON.parse(app.savedJson);
   app.uploads.clear();
   changed();
@@ -440,7 +518,7 @@ function renderPreview() {
   const settings = app.normalized();
   syncPageSelect(settings);
   const heroImage = settings.theme.heroImage ? absolute(app.imageSrc(settings.theme.heroImage)) : '';
-  const css = themeCss(settings.theme, { imageUrl: heroImage, fontBase: FONT_BASE, effects: settings.effects, textStyles: settings.textStyles, perkIcon: perkCss(settings) });
+  const css = themeCss(settings.theme, { imageUrl: heroImage, fontBase: FONT_BASE, effects: settings.effects, textStyles: settings.textStyles, perkIcon: perkCss(settings), nav: settings.nav.look });
   const nextThemeUrl = URL.createObjectURL(new Blob([css], { type: 'text/css' }));
   const html = renderPage(settings, app.previewPage, { preview: true, previewSuccess: app.previewSuccess, themeHref: nextThemeUrl, resolveImage: app.imageSrc });
 
@@ -686,6 +764,7 @@ async function publish({ force = false } = {}) {
 async function reloadFromGitHub() {
   const file = await app.gh.readFile(SETTINGS_PATH);
   const settings = normalizeSettings(JSON.parse(file.text));
+  remember();
   Object.assign(app, { fileSha: file.sha, savedJson: serialize(settings), settings: structuredClone(settings) });
   app.uploads.clear();
   changed();
@@ -740,6 +819,7 @@ function applyPreset(id) {
   const preset = PRESETS[id];
   const theme = app.settings.theme;
   const keepImage = theme.heroBackground === 'image';
+  remember();
   theme.preset = id;
   theme.colors = { ...preset.colors };
   for (const key of PRESET_KEYS) theme[key] = preset[key];
@@ -755,6 +835,7 @@ async function loadVersion(sha) {
   }
   try {
     const file = await app.gh.readFile(SETTINGS_PATH, sha);
+    remember();
     app.settings = normalizeSettings(JSON.parse(file.text));
     changed();
     toast('Older version loaded. Check the preview, then Publish to restore it.');
@@ -780,6 +861,7 @@ async function importJson(file) {
     const data = JSON.parse(await file.text());
     const choice = await confirmDialog({ title: 'Import these settings?', body: 'They replace what is in the editor. Nothing goes live until you publish.', confirm: 'Import' });
     if (choice !== 'ok') return;
+    remember();
     app.settings = normalizeSettings(data);
     changed();
     renderPanel();
@@ -797,6 +879,7 @@ async function resetDefaults() {
     danger: true,
   });
   if (choice !== 'ok') return;
+  remember();
   app.settings = structuredClone(DEFAULT_SETTINGS);
   changed();
   renderPanel();

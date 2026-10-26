@@ -10,7 +10,8 @@
   --shadow: 0 24px 60px -28px color-mix(in srgb, #000 70%, transparent);
   --container: 1160px;
   --header-height: 64px;
-  --nav-bg: color-mix(in srgb, var(--bg) 55%, #000);
+  --nav-bg: var(--nav-bg-custom, color-mix(in srgb, var(--bg) 55%, #000));
+  --nav-scale-safe: var(--nav-scale, 1);
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   --radius-sm: calc(var(--radius) * 0.7);
 }
@@ -395,8 +396,8 @@ main {
   justify-content: center;
   gap: 0.35rem 1.1rem;
   max-width: calc(100vw - 2rem);
-  padding: 0.55rem 1.9rem 0.75rem;
-  filter: drop-shadow(0 5px 0 color-mix(in srgb, #000 55%, transparent));
+  padding: calc(0.55rem * var(--nav-scale-safe)) calc(1.9rem * var(--nav-scale-safe)) calc(0.75rem * var(--nav-scale-safe));
+  filter: drop-shadow(var(--nav-shadow, 0 5px 0 color-mix(in srgb, #000 55%, transparent)));
 }
 
 .nav-bar::before {
@@ -441,9 +442,9 @@ main {
 .nav-link {
   display: inline-block;
   padding: 0.3rem 0.1rem;
-  color: var(--accent-2);
+  color: var(--nav-link, var(--accent-2));
   font-family: var(--font-heading);
-  font-size: calc(1.02rem * var(--k, 1));
+  font-size: calc(1.02rem * var(--k, 1) * var(--nav-scale-safe));
   font-weight: var(--heading-weight);
   letter-spacing: 0.04em;
   text-transform: var(--heading-case);
@@ -453,12 +454,12 @@ main {
 }
 
 .nav-link:hover {
-  color: var(--text);
+  color: var(--nav-active, var(--text));
   transform: translateY(-1px);
 }
 
 .nav-link[aria-current='page'] {
-  color: var(--text);
+  color: var(--nav-active, var(--text));
 }
 
 .nav-mark .sigil {
@@ -469,28 +470,28 @@ main {
 
 .nav-divider {
   display: inline-flex;
-  color: var(--accent);
+  color: var(--nav-divider, var(--accent));
 }
 
 .nav-divider .sigil {
-  width: 11px;
-  height: 11px;
+  width: calc(11px * var(--nav-scale-safe));
+  height: calc(11px * var(--nav-scale-safe));
 }
 
 .nav-links > .nav-divider:nth-child(4n) {
-  color: var(--accent-2);
+  color: var(--nav-divider, var(--accent-2));
 }
 
 .nav-divider-socials {
-  color: var(--accent-2);
+  color: var(--nav-divider, var(--accent-2));
 }
 
 .nav-socials a {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  color: var(--text);
+  width: calc(32px * var(--nav-scale-safe));
+  height: calc(32px * var(--nav-scale-safe));
+  color: var(--nav-icon, var(--text));
   transition: color 0.15s, transform 0.15s var(--ease);
 }
 
@@ -500,8 +501,8 @@ main {
 }
 
 .nav-socials .icon {
-  width: 20px;
-  height: 20px;
+  width: calc(20px * var(--nav-scale-safe));
+  height: calc(20px * var(--nav-scale-safe));
 }
 
 .is-placeholder {
@@ -517,7 +518,7 @@ main {
 
 /* Classic: full-width translucent header with the brand on the left. */
 [data-nav='classic'] .site-header {
-  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  background: var(--nav-bg-custom, color-mix(in srgb, var(--bg) 72%, transparent));
   -webkit-backdrop-filter: blur(14px) saturate(140%);
   backdrop-filter: blur(14px) saturate(140%);
   border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
@@ -1679,7 +1680,7 @@ main:has(> .social-band:not(.social-plain):last-child) + .site-footer {
     height: 46px;
     border-radius: var(--radius-sm);
     background: var(--nav-bg);
-    color: var(--accent-2);
+    color: var(--nav-link, var(--accent-2));
     box-shadow: 0 4px 0 color-mix(in srgb, #000 55%, transparent);
   }
 
@@ -1733,6 +1734,11 @@ main:has(> .social-band:not(.social-plain):last-child) + .site-footer {
 
   .nav-link {
     font-size: calc(1.7rem * var(--k, 1));
+  }
+
+  /* The phone menu is full-screen, so the menu size setting doesn't apply there. */
+  .nav-bar {
+    --nav-scale-safe: 1;
   }
 
   .nav-divider-socials {

@@ -286,6 +286,40 @@ export const TEXT_ROLES = {
 export const TEXT_COLORS = { default: 'Theme default', text: 'Text colour', muted: 'Secondary text', accent: 'Accent', accent2: 'Second accent', custom: 'Custom colour' };
 export const TEXT_CASES = { default: 'Theme default', uppercase: 'UPPERCASE', normal: 'As typed' };
 export const TEXT_SHADOWS = { none: 'None', soft: 'Soft shadow', hard: 'Hard drop shadow', glow: 'Accent glow' };
+// --- top menu ---------------------------------------------------------------
+
+export const NAV_COLORS = { auto: 'Theme default', text: 'Text colour', muted: 'Secondary text', accent: 'Accent', accent2: 'Second accent', bg: 'Page background', surface: 'Card colour' };
+export const NAV_SHADOWS = { drop: 'Hard drop shadow', soft: 'Soft shadow', glow: 'Accent glow', none: 'None' };
+export const DEFAULT_NAV_LOOK = { background: 'auto', opacity: 100, linkColor: 'auto', activeColor: 'auto', iconColor: 'auto', dividerColor: 'auto', size: 100, shadow: 'drop' };
+
+const NAV_SHADOW_CSS = {
+  soft: '0 6px 14px rgb(0 0 0 / 0.45)',
+  glow: '0 0 14px color-mix(in srgb, var(--accent) 60%, transparent)',
+  none: '0 0 0 transparent',
+};
+
+/** A menu colour setting as CSS: a theme colour name, a hex value, or null for the default. */
+function navColor(value) {
+  if (isHexColor(value)) return value;
+  return { text: 'var(--text)', muted: 'var(--muted)', accent: 'var(--accent)', accent2: 'var(--accent-2)', bg: 'var(--bg)', surface: 'var(--surface)' }[value] ?? null;
+}
+
+function navVars(look) {
+  if (!look) return [];
+  const vars = [];
+  if (look.background !== 'auto' || look.opacity !== 100) {
+    const base = navColor(look.background) ?? 'color-mix(in srgb, var(--bg) 55%, #000)';
+    vars.push(`--nav-bg-custom: ${look.opacity < 100 ? `color-mix(in srgb, ${base} ${look.opacity}%, transparent)` : base};`);
+  }
+  for (const [key, name] of [['linkColor', 'nav-link'], ['activeColor', 'nav-active'], ['iconColor', 'nav-icon'], ['dividerColor', 'nav-divider']]) {
+    const value = navColor(look[key]);
+    if (value) vars.push(`--${name}: ${value};`);
+  }
+  if (look.size !== 100) vars.push(`--nav-scale: ${(look.size / 100).toFixed(2)};`);
+  if (NAV_SHADOW_CSS[look.shadow]) vars.push(`--nav-shadow: ${NAV_SHADOW_CSS[look.shadow]};`);
+  return vars;
+}
+
 export const DEFAULT_TEXT_STYLE = { font: '', weight: 0, size: 100, case: 'default', color: 'default', customColor: '#ffffff', tracking: 0, shadow: 'none', crt: true };
 
 const SHADOW_CSS = {
@@ -392,7 +426,7 @@ export function preloadFont(fontId) {
   return face ? face.latin : '';
 }
 
-export function themeCss(theme, { fontBase = '/assets/fonts/', imageUrl, effects, textStyles, perkIcon } = {}) {
+export function themeCss(theme, { fontBase = '/assets/fonts/', imageUrl, effects, textStyles, perkIcon, nav } = {}) {
   const c = theme.colors;
   const heading = FONTS[theme.headingFont] ?? FONTS.system;
   const heroImage = imageUrl ?? safeAssetPath(theme.heroImage);
@@ -433,7 +467,9 @@ ${faces.join('\n')}
   --perk-size: ${perkIcon.size}px;
   --perk-color: ${COLOR_VARS[perkIcon.color] ?? 'var(--accent)'};`
       : ''
-  }
+  }${navVars(nav)
+    .map((v) => `\n  ${v}`)
+    .join('')}
 }
 ${textStyleCss(textStyles)}
 `;

@@ -8,11 +8,14 @@ import { PROVIDER_IDS } from './providers.mjs';
 import {
   BUTTON_STYLES,
   CARD_STYLES,
+  DEFAULT_NAV_LOOK,
   DEFAULT_TEXT_STYLE,
   FONT_IDS,
   FORM_LAYOUTS,
   HEADING_CASES,
   HERO_BACKGROUNDS,
+  NAV_COLORS,
+  NAV_SHADOWS,
   PRESETS,
   TEXT_CASES,
   TEXT_COLORS,
@@ -78,6 +81,7 @@ export const DEFAULT_SETTINGS = {
     style: 'bar-stepped',
     dividers: true,
     showSocials: true,
+    look: { ...DEFAULT_NAV_LOOK },
   },
   home: {
     layout: 'about-first',
@@ -234,6 +238,8 @@ const link = (value) => safeUrl(line(value, 500, ''));
 const httpLink = (value) => safeUrl(line(value, 500, ''), { allowMailto: false, allowRelative: false });
 // Images must be files uploaded to this site, so pages never load anything from another server.
 const image = (value) => safeAssetPath(value);
+// A colour picked from the theme (by name) or a custom hex value.
+const themeColor = (value, names, fallback) => (isHexColor(value) ? value.toLowerCase() : oneOf(value, Object.keys(names), fallback));
 
 /** Ordered on/off sections: keeps the given order, drops unknown ids, appends missing ones. */
 function sectionList(value, ids, defaults, labels) {
@@ -325,6 +331,20 @@ export function normalizeSettings(input) {
       style: oneOf(nav.style, Object.keys(NAV_STYLES), d.nav.style),
       dividers: bool(nav.dividers, d.nav.dividers),
       showSocials: bool(nav.showSocials, d.nav.showSocials),
+      look: (() => {
+        const look = obj(nav.look);
+        const dl = DEFAULT_NAV_LOOK;
+        return {
+          background: themeColor(look.background, NAV_COLORS, dl.background),
+          opacity: num(look.opacity, 30, 100, dl.opacity),
+          linkColor: themeColor(look.linkColor, NAV_COLORS, dl.linkColor),
+          activeColor: themeColor(look.activeColor, NAV_COLORS, dl.activeColor),
+          iconColor: themeColor(look.iconColor, NAV_COLORS, dl.iconColor),
+          dividerColor: themeColor(look.dividerColor, NAV_COLORS, dl.dividerColor),
+          size: num(look.size, 70, 160, dl.size),
+          shadow: oneOf(look.shadow, Object.keys(NAV_SHADOWS), dl.shadow),
+        };
+      })(),
     },
     home: {
       layout: oneOf(home.layout, Object.keys(HOME_LAYOUTS), d.home.layout),

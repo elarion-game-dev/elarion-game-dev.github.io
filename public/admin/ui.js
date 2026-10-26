@@ -30,6 +30,8 @@ export const ICONS = {
   logout: '<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/>',
   download: '<path d="M12 4v12M7 11l5 5 5-5M5 20h14"/>',
   refresh: '<path d="M20 11a8 8 0 0 0-14.9-3.5M4 4v4h4M4 13a8 8 0 0 0 14.9 3.5M20 20v-4h-4"/>',
+  undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+  redo: '<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',
   lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
 };
 
@@ -122,6 +124,35 @@ function wrap(label, control, { help, id, inline = false } = {}) {
 
 // --- bound controls: each reads/writes one settings path via the app ------------------
 
+/**
+ * Small button that puts one setting back to its published value. The admin shows it only while the
+ * value differs from what is published (see updateReverts in admin.js).
+ */
+export function revert(app, path) {
+  return h(
+    'button',
+    {
+      type: 'button',
+      class: 'revert-btn',
+      hidden: true,
+      dataset: { revert: path },
+      onclick: (event) => {
+        event.preventDefault();
+        app.revert(path);
+      },
+    },
+    icon('undo'),
+    h('span', {}, 'Revert')
+  );
+}
+
+/** Field wrapper plus its revert button. */
+function withRevert(app, path, el) {
+  el.classList.add('has-revert');
+  el.append(revert(app, path));
+  return el;
+}
+
 export function text(app, path, { label, help, placeholder, maxlength, type = 'text', multiline = false, rows = 3, validate, counter, rerender, mono, onInput } = {}) {
   const id = nextId();
   const value = app.get(path) ?? '';
@@ -148,7 +179,7 @@ export function text(app, path, { label, help, placeholder, maxlength, type = 't
     if (rerender) app.rerender();
   });
   check();
-  return el;
+  return withRevert(app, path, el);
 }
 
 export function toggle(app, path, { label, help, rerender } = {}) {
@@ -158,11 +189,15 @@ export function toggle(app, path, { label, help, rerender } = {}) {
     app.set(path, input.checked);
     if (rerender) app.rerender();
   });
-  return h(
-    'div',
-    { class: 'field field-toggle' },
-    h('label', { class: 'switch', for: id }, input, h('span', { class: 'switch-track', 'aria-hidden': 'true' }), h('span', { class: 'switch-label' }, label)),
-    help ? h('p', { class: 'field-help' }, help) : null
+  return withRevert(
+    app,
+    path,
+    h(
+      'div',
+      { class: 'field field-toggle' },
+      h('label', { class: 'switch', for: id }, input, h('span', { class: 'switch-track', 'aria-hidden': 'true' }), h('span', { class: 'switch-label' }, label)),
+      help ? h('p', { class: 'field-help' }, help) : null
+    )
   );
 }
 
@@ -181,7 +216,7 @@ export function select(app, path, { label, help, options, rerender, onChange } =
     onChange?.(input.value);
     if (rerender) app.rerender();
   });
-  return wrap(label, input, { help, id });
+  return withRevert(app, path, wrap(label, input, { help, id }));
 }
 
 /** format(value) can replace the shown value, e.g. "Default" for 0. */
@@ -195,7 +230,7 @@ export function range(app, path, { label, help, min, max, step = 1, unit = '', f
     show();
   });
   show();
-  return wrap(label, h('div', { class: 'range-row' }, input, output), { help, id });
+  return withRevert(app, path, wrap(label, h('div', { class: 'range-row' }, input, output), { help, id }));
 }
 
 export function color(app, path, { label, onChange } = {}) {
@@ -220,7 +255,34 @@ export function color(app, path, { label, onChange } = {}) {
       commit(v);
     }
   });
-  return h('div', { class: 'field field-color' }, h('label', { class: 'field-label', for: id }, label), h('div', { class: 'color-row' }, picker, hex));
+  return withRevert(app, path, h('div', { class: 'field field-color' }, h('label', { class: 'field-label', for: id }, label), h('div', { class: 'color-row' }, picker, hex)));
+}
+
+/**
+ * A colour that is either a named theme colour (options: { key: label }) or a custom hex value.
+ * Picking "Custom colour" shows a colour picker.
+ */
+export function colorChoice(app, path, { label, help, options, fallback = '#ffffff' } = {}) {
+  const id = nextId();
+  const current = app.get(path);
+  const custom = /^#[0-9a-f]{6}$/i.test(current ?? '');
+  const choice = h(
+    'select',
+    { id, class: 'input' },
+    Object.entries(options).map(([value, text]) => h('option', { value, selected: value === current }, text)),
+    h('option', { value: 'custom', selected: custom }, 'Custom colour…')
+  );
+  choice.addEventListener('change', () => {
+    app.set(path, choice.value === 'custom' ? fallback : choice.value);
+    app.rerender();
+  });
+  let control = choice;
+  if (custom) {
+    const picker = h('input', { type: 'color', value: current, class: 'color-swatch', 'aria-label': `${label}: custom colour` });
+    picker.addEventListener('input', () => app.set(path, picker.value.toLowerCase()));
+    control = h('div', { class: 'color-row' }, choice, picker);
+  }
+  return withRevert(app, path, wrap(label, control, { help, id }));
 }
 
 /** Ordered sections with an on/off switch, up/down buttons and an editable heading: [{ id, enabled, heading }]. */
@@ -240,7 +302,7 @@ export function sectionList(app, path, { labels, help } = {}) {
       rowButtons(app, path, i, sections.length, { removable: false })
     );
   });
-  return h('div', { class: 'field' }, h('ul', { class: 'section-list' }, rows), help ? h('p', { class: 'field-help' }, help) : null);
+  return withRevert(app, path, h('div', { class: 'field' }, h('ul', { class: 'section-list' }, rows), help ? h('p', { class: 'field-help' }, help) : null));
 }
 
 /** Editable list of strings with add / remove / reorder. */
@@ -255,7 +317,7 @@ export function stringList(app, path, { label, help, max = 6, placeholder } = {}
     items.length < max
       ? h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: () => (app.set(path, [...items, '']), app.rerender()) }, icon('plus'), 'Add')
       : null;
-  return h('div', { class: 'field', dataset: { path } }, h('span', { class: 'field-label' }, label), h('div', { class: 'list' }, rows), add, help ? h('p', { class: 'field-help' }, help) : null);
+  return withRevert(app, path, h('div', { class: 'field', dataset: { path } }, h('span', { class: 'field-label' }, label), h('div', { class: 'list' }, rows), add, help ? h('p', { class: 'field-help' }, help) : null));
 }
 
 function rowButtons(app, path, index, length, { removable = true } = {}) {
@@ -322,7 +384,7 @@ export function repeater(app, path, { title, itemTitle, fields, newItem, max = 2
     title ? h('span', { class: 'field-label' }, title) : null,
     !items.length && empty ? h('p', { class: 'field-help' }, empty) : null,
     blocks,
-    add
+    h('div', { class: 'repeater-actions' }, add, revert(app, path))
   );
 }
 
@@ -371,7 +433,10 @@ export function image(app, path, { label, help, upload = {} } = {}) {
     'Remove'
   );
 
-  return h(
+  return withRevert(
+    app,
+    path,
+    h(
     'div',
     { class: 'field field-image' },
     h('span', { class: 'field-label' }, label),
@@ -387,6 +452,7 @@ export function image(app, path, { label, help, upload = {} } = {}) {
       )
     ),
     help ? h('p', { class: 'field-help' }, help) : null
+    )
   );
 }
 

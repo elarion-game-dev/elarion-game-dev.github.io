@@ -249,6 +249,18 @@ await test('Inline "Follow" block sits right after the sign-up form; the strip s
   assert.ok(!strip.includes('social-inline') && strip.includes('<section class="social-band"'));
 });
 
+await test('Menu appearance becomes theme variables and rejects unsafe values', () => {
+  const s = structuredClone(DEFAULT_SETTINGS);
+  assert.ok(!renderSite(normalizeSettings(s), { version: 'v' })['assets/css/theme.css'].includes('--nav-'), 'defaults add nothing');
+  s.nav.look = { background: '#FF6600', opacity: 80, linkColor: 'text', activeColor: 'red;}</style><script>', iconColor: 'accent', dividerColor: 'auto', size: 120, shadow: 'none' };
+  const n = normalizeSettings(s);
+  assert.equal(n.nav.look.activeColor, 'auto');
+  const css = renderSite(n, { version: 'v' })['assets/css/theme.css'];
+  assert.match(css, /--nav-bg-custom: color-mix\(in srgb, #ff6600 80%, transparent\);/);
+  assert.match(css, /--nav-link: var\(--text\);[\s\S]*--nav-icon: var\(--accent\);[\s\S]*--nav-scale: 1\.20;[\s\S]*--nav-shadow: 0 0 0 transparent;/);
+  assert.ok(!css.includes('--nav-active') && !css.includes('<'));
+});
+
 await test('Perk icon, text styles and click-to-edit markers', () => {
   const s = structuredClone(DEFAULT_SETTINGS);
   s.newsletter.perkIcon = 'heart';

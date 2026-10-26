@@ -5,7 +5,7 @@ Elarion's game dev site: a newsletter sign-up home page, news and a press kit. L
 - **Home** (`/`): the sign-up page. Logo, a short about text, the newsletter hook, one email field and one button. After signing up, a "Wishlist on Steam" button.
 - **News** (`/news/`): posts, one page per post (`/news/<address>/`) and an RSS feed (`/news/feed.xml`).
 - **Press kit** (`/press/`): factsheet, description, history, features, screenshots, logos, videos, quotes, team and contact. Every section can be switched off, renamed and reordered.
-- **Menu**: a bar hanging from the top edge with star dividers and social icons; a full-screen menu behind a button on phones (works without JavaScript).
+- **Menu**: a bar hanging from the top edge with star dividers and social icons; a full-screen menu behind a button on phones (works without JavaScript). Its colours, opacity, size and shadow are editable.
 - **Social links**: ~30 game-dev platforms (stores, Discord, video, social, crowdfunding). Each link can show in the top menu, in the "Follow" block (right under the sign-up form, or as a strip above the footer), or both.
 - **Effects**: a CRT screen (scanlines, phosphor stripes, flicker, red/blue text split) and comic halftone dots that drift with the mouse. Both have still versions for visitors who prefer reduced motion.
 - **Theme**: 13 colour presets (dark and light, including white & orange), fonts, buttons, backgrounds, and per-text styles (font, weight, size, colour, letter spacing, shadow, CRT split) for headings, perks and the menu. The perk icon can be any of ~17 icons or an uploaded image.
@@ -17,7 +17,8 @@ The sign-up form posts straight to your email provider (Kit, MailerLite, Buttond
 
 1. Open `/admin/` and sign in with a GitHub token (the sign-in page has a link that pre-fills it).
 2. Edit; the preview on the right follows the panel you're in and updates as you type. Use the page picker to see any page, and the ✓ button to see the message shown after signing up.
-3. Press **Publish** (or Ctrl+S). That makes one commit to `content/site.json` (plus any uploaded images), and the site is live about a minute later. The admin shows the deploy status.
+3. Changed a field by mistake? Every changed field shows **Revert** (back to the published value), and **Undo/Redo** in the top bar (Ctrl+Z / Ctrl+Shift+Z) step through every edit, including presets, imports and Discard.
+4. Press **Publish** (or Ctrl+S). That makes one commit to `content/site.json` (plus any uploaded images), and the site is live about a minute later. The admin shows the deploy status.
 
 Every publish is a git commit, so **History & backup** in the admin can load any older version. You can also edit `content/site.json` directly and push.
 
