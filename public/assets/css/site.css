@@ -597,9 +597,14 @@ main {
 .home-column {
   display: grid;
   justify-items: center;
-  gap: clamp(2.5rem, 6vw, 4rem);
-  max-width: 700px;
+  gap: 5rem;
+  max-width: 688px;
   text-align: center;
+}
+
+/* the logo sits closer to the first section than the sections sit to each other */
+.home-column > .home-logo {
+  margin-bottom: -3rem;
 }
 
 .home-column > * {
@@ -648,12 +653,15 @@ main {
 }
 
 .home-block h2 {
-  font-size: calc(clamp(1.8rem, 1.2rem + 2.4vw, 2.9rem) * var(--heading-scale) * var(--k, 1));
+  font-size: calc(2.5rem * var(--heading-scale) * var(--k, 1));
+  line-height: 1.2;
+  margin-bottom: 1.5rem;
+  text-wrap: wrap;
 }
 
 .home-about .prose {
   color: color-mix(in srgb, var(--text) 85%, var(--muted));
-  font-size: calc(1.1em * var(--k, 1));
+  font-size: calc(1.25rem * var(--k, 1));
   text-wrap: pretty;
 }
 
@@ -692,7 +700,7 @@ main {
 
 /* sign-up form */
 .signup {
-  width: min(100%, 460px);
+  width: min(100%, 400px);
   margin-inline: auto;
 }
 
@@ -705,13 +713,13 @@ main {
   display: block;
   margin-bottom: 0.4rem;
   color: var(--text);
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 600;
 }
 
 .field-row {
   display: grid;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 [data-form='inline'] .field-row {
@@ -721,8 +729,8 @@ main {
 
 .input {
   min-width: 0;
-  min-height: 52px;
-  padding: 0.8rem 1rem;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
   border: 1px solid color-mix(in srgb, var(--muted) 45%, var(--border));
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--bg) 60%, transparent);
@@ -746,7 +754,8 @@ main {
 }
 
 .btn-submit {
-  min-height: 52px;
+  min-height: 44px;
+  padding-block: 0.5rem;
   font-family: var(--font-heading);
   letter-spacing: 0.06em;
   text-transform: var(--heading-case);
@@ -1021,7 +1030,7 @@ label.consent {
 }
 
 .social-band h2 {
-  margin-bottom: 1.6rem;
+  margin-bottom: 1.5rem;
 }
 
 /* inline layout: part of the page, not a strip */
@@ -1038,7 +1047,7 @@ label.consent {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 1rem;
+  gap: 1rem 4rem;
   margin: 0;
   padding: 0;
   list-style: none;

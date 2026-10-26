@@ -153,7 +153,7 @@
     "hook": {
       "font": "",
       "weight": 0,
-      "size": 95,
+      "size": 100,
       "case": "default",
       "color": "default",
       "customColor": "#ffffff",
@@ -197,7 +197,7 @@
     "bandHeading": {
       "font": "",
       "weight": 0,
-      "size": 90,
+      "size": 100,
       "case": "default",
       "color": "default",
       "customColor": "#ffffff",
