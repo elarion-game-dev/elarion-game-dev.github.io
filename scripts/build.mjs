@@ -3,7 +3,7 @@
 // No dependencies: runs on plain Node.js 20+.
 
 import { createHash } from 'node:crypto';
-import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { renderSite } from '../src/render.mjs';
@@ -37,12 +37,25 @@ export async function build({ log = console.log } = {}) {
   await rm(dist, { recursive: true, force: true });
   await cp(path.join(root, 'public'), dist, { recursive: true, filter: copyFilter });
   await cp(path.join(root, 'src'), path.join(dist, 'assets', 'lib'), { recursive: true, filter: copyFilter });
-  await writeFile(path.join(dist, 'assets', 'lib', 'deploy.mjs'), `export const DEPLOY = ${JSON.stringify(repo)};\n`);
 
+  // One version for the content and all code, so browsers never mix cached files from different deploys.
+  const code = (await readdir(dist, { recursive: true })).filter((f) => /\.(m?js|css)$/.test(f)).sort();
   const fingerprint = createHash('sha256');
   fingerprint.update(JSON.stringify(settings));
-  for (const file of ['public/assets/css/site.css', 'public/assets/js/site.js']) fingerprint.update(await readFile(path.join(root, file)));
+  for (const file of code) fingerprint.update(file).update(await readFile(path.join(dist, file)));
   const version = fingerprint.digest('hex').slice(0, 10);
+
+  // Stamp every relative module import, and the admin's own entry files, with that version.
+  const stamp = (spec) => `${spec}?v=${version}`;
+  for (const file of code.filter((f) => /\.m?js$/.test(f))) {
+    const target = path.join(dist, file);
+    const source = await readFile(target, 'utf8');
+    await writeFile(target, source.replace(/(\b(?:from|import)\s*\(?\s*)(['"])(\.\.?\/[^'"?]+\.m?js)\2/g, (_, pre, q, spec) => `${pre}${q}${stamp(spec)}${q}`));
+  }
+  const adminPage = path.join(dist, 'admin', 'index.html');
+  const admin = await readFile(adminPage, 'utf8');
+  await writeFile(adminPage, admin.replace('href="admin.css"', `href="${stamp('admin.css')}"`).replace('src="admin.js"', `src="${stamp('admin.js')}"`));
+  await writeFile(path.join(dist, 'assets', 'lib', 'deploy.mjs'), `export const DEPLOY = ${JSON.stringify(repo)};\nexport const VERSION = '${version}';\n`);
 
   const files = renderSite(settings, { version, repo });
   for (const [file, contents] of Object.entries(files)) {

@@ -2,7 +2,7 @@
 // There is no server. GitHub checks the token on every request, and every publish is a commit
 // that triggers the deploy workflow.
 
-import { DEPLOY } from '../assets/lib/deploy.mjs';
+import { DEPLOY, VERSION } from '../assets/lib/deploy.mjs';
 import { pageIdForPath, perkCss, previewPages, renderPage, sortedPosts } from '../assets/lib/render.mjs';
 import { DEFAULT_SETTINGS, normalizeSettings } from '../assets/lib/settings.mjs';
 import { FONTS, PRESETS, PRESET_KEYS, fontFaces, fontStack, themeCss } from '../assets/lib/themes.mjs';
@@ -520,7 +520,7 @@ function renderPreview() {
   const heroImage = settings.theme.heroImage ? absolute(app.imageSrc(settings.theme.heroImage)) : '';
   const css = themeCss(settings.theme, { imageUrl: heroImage, fontBase: FONT_BASE, effects: settings.effects, textStyles: settings.textStyles, perkIcon: perkCss(settings), nav: settings.nav.look });
   const nextThemeUrl = URL.createObjectURL(new Blob([css], { type: 'text/css' }));
-  const html = renderPage(settings, app.previewPage, { preview: true, previewSuccess: app.previewSuccess, themeHref: nextThemeUrl, resolveImage: app.imageSrc });
+  const html = renderPage(settings, app.previewPage, { preview: true, previewSuccess: app.previewSuccess, themeHref: nextThemeUrl, resolveImage: app.imageSrc, version: VERSION });
 
   const current = ui.frames[activeFrame];
   const next = ui.frames[1 - activeFrame];

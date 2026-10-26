@@ -117,9 +117,9 @@ export const DEFAULT_SETTINGS = {
     emailLabel: 'Email',
     placeholder: 'you@example.com',
     buttonLabel: 'Subscribe',
-    trustText: 'About one email a month. No spam, and you can unsubscribe with one click at any time.',
+    trustText: '',
     requireConsent: false,
-    consentText: 'By subscribing you agree to receive the Elarion newsletter. See the {privacy}.',
+    consentText: '',
     successTitle: 'Almost there! Check your inbox.',
     successBody: "I've sent you a confirmation link. Click it to finish subscribing. Nothing there after a few minutes? Check your spam folder.",
     closedMessage: 'Sign-ups open very soon. Check back in a day or two!',
@@ -405,8 +405,10 @@ export function normalizeSettings(input) {
       buttonLabel: required(nl.buttonLabel, 40, d.newsletter.buttonLabel),
       trustText: line(nl.trustText, 300, d.newsletter.trustText),
       requireConsent: bool(nl.requireConsent, d.newsletter.requireConsent),
-      // Blank hides the statement under the form; the checkbox always needs words.
-      consentText: (bool(nl.requireConsent, d.newsletter.requireConsent) ? required : line)(nl.consentText, 400, d.newsletter.consentText),
+      // Nothing under the form unless written in; only a turned-on checkbox gets words of its own.
+      consentText: bool(nl.requireConsent, d.newsletter.requireConsent)
+        ? required(nl.consentText, 400, 'I want to receive the Elarion newsletter. See the {privacy}.')
+        : line(nl.consentText, 400, ''),
       successTitle: required(nl.successTitle, 100, d.newsletter.successTitle),
       successBody: str(nl.successBody, 500, d.newsletter.successBody),
       closedMessage: line(nl.closedMessage, 200, d.newsletter.closedMessage),
