@@ -24,7 +24,7 @@ export const PROVIDERS = {
         label: 'Form ID',
         pattern: /^\d{1,12}$/,
         placeholder: '1234567',
-        help: 'In Kit: Grow → Landing Pages & Forms → your form → Publish → HTML. The ID is the number in "app.kit.com/forms/<ID>/subscriptions".',
+        help: 'In Kit: Grow → Landing Pages & Forms → your form → Embed → HTML. The ID is the number in "app.kit.com/forms/<ID>/subscriptions".',
       },
     ],
     action: (c) => `https://app.kit.com/forms/${c.formId}/subscriptions`,
