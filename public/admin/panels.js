@@ -314,9 +314,9 @@ function home(app) {
 const GUIDES = {
   kit: (siteUrl) => [
     h('span', {}, 'Create a free account at ', link('https://kit.com', 'kit.com'), '.'),
-    h('span', {}, 'Go to ', h('strong', {}, 'Grow → Landing Pages & Forms → Create new → Form → Inline'), ' and pick any template (its design is not used; this site draws its own form).'),
-    h('span', {}, "In the form's ", h('strong', {}, 'Settings → Incentive'), ', turn on ', h('strong', {}, 'Send incentive email'), '. This is double opt-in: people must click a link in their inbox before they are subscribed. Edit that email\'s subject and text so it sounds like you.'),
-    h('span', {}, 'Set the redirect after confirming to ', code(`${siteUrl}/confirmed/`), ' so new subscribers land on your welcome page (with the Steam button).'),
+    h('span', {}, 'Go to ', h('strong', {}, 'Audience growth → Landing pages & forms'), ', open the ', h('strong', {}, 'Forms'), ' tab and create a new form with the ', h('strong', {}, 'Inline'), ' format. Pick any template (its design is not used; this site draws its own form).'),
+    h('span', {}, "In the form builder's ", h('strong', {}, 'Settings → Confirmation Email'), ', tick ', h('strong', {}, 'Send confirmation email'), ' and leave ', h('strong', {}, 'Auto-confirm'), ' off. This is double opt-in: people must click a link in their inbox before they are subscribed. Use ', h('strong', {}, 'Edit Email Contents'), ' to make the email sound like you.'),
+    h('span', {}, 'In the same tab, set ', h('strong', {}, 'After confirming redirect to'), ' ', code(`${siteUrl}/confirmed/`), ' so new subscribers land on your welcome page (with the Steam button). Save, then press ', h('strong', {}, 'Save & Publish'), '.'),
     h('span', {}, 'Press ', h('strong', {}, 'Embed'), ' (top right of the form builder) and open the ', h('strong', {}, 'HTML'), ' tab. The Form ID is the number in ', code('app.kit.com/forms/1234567/subscriptions'), '. Paste it below. (Not the letters-and-numbers ', code('data-uid'), ', which is a different code.)'),
     h('span', {}, "In Kit's account settings, add your sender name, sender email and mailing address. Anti-spam laws (CAN-SPAM) require an address in every email footer; Kit adds it automatically. A PO box or virtual mailbox is fine if you'd rather not publish your home address."),
     h('span', {}, "Once you own a domain, authenticate it in Kit's email settings and send from an address on it. Emails from your own domain reach inboxes more reliably, and your sender reputation moves with you if you ever change provider."),

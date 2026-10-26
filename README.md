@@ -38,7 +38,7 @@ By default the token lives in the tab's session storage and is gone when the tab
 Kit is free for up to 10,000 subscribers. The admin's **Email provider** panel has the full steps:
 
 1. Create a Kit account and an inline form.
-2. Turn on double opt-in ("Send incentive email") and set the redirect after confirming to `https://elarion-game-dev.github.io/confirmed/`. That page thanks them and shows the Steam button.
+2. Turn on double opt-in (form **Settings → Confirmation Email → Send confirmation email**, Auto-confirm off) and set "After confirming redirect to" to `https://elarion-game-dev.github.io/confirmed/`. That page thanks them and shows the Steam button.
 3. Fill in **Privacy & legal** (your name or company, country, contact email) so the privacy policy says who collects the addresses.
 4. Copy the form ID into the admin and publish.
 5. Add your sender name, sender email and mailing address in Kit (anti-spam laws require an address in every email footer; Kit adds it for you).
