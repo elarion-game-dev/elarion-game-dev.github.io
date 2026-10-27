@@ -426,6 +426,12 @@ export function preloadFont(fontId) {
   return face ? face.latin : '';
 }
 
+/** Error red that stays readable on the page background; on mid-tone backgrounds (e.g. orange) the text colour. */
+function dangerColor(c) {
+  const [first, second] = isDark(c.bg) ? ['#ff8f85', '#b42318'] : ['#b42318', '#ff8f85'];
+  return [first, second].find((red) => contrast(red, c.bg) >= 4.5) ?? c.text;
+}
+
 export function themeCss(theme, { fontBase = '/assets/fonts/', imageUrl, effects, textStyles, perkIcon, nav } = {}) {
   const c = theme.colors;
   const heading = FONTS[theme.headingFont] ?? FONTS.system;
@@ -445,6 +451,7 @@ ${faces.join('\n')}
   --accent: ${c.accent};
   --on-accent: ${c.onAccent};
   --accent-2: ${c.accent2};
+  --danger: ${dangerColor(c)};
   --font-heading: ${fontStack(theme.headingFont)};
   --font-body: ${fontStack(theme.bodyFont)};
   --heading-weight: ${heading.heading.weight};

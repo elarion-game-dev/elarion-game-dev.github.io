@@ -99,15 +99,32 @@ function enhance(form) {
       return say(MESSAGES.consent, 'error');
     }
 
-    // Bots fill hidden fields and submit instantly. Show them a normal success and send nothing.
-    if (honeypot?.value || Date.now() - loadedAt < MIN_FILL_MS) return done();
+    // Bots fill hidden fields. Show them a normal success and send nothing.
+    if (honeypot?.value) return done();
+
+    const unbusy = () => {
+      busy = false;
+      button.disabled = false;
+      button.classList.remove('is-loading');
+    };
+    busy = true;
+    button.disabled = true;
+    button.classList.add('is-loading');
+    say('');
+    // Bots also submit instantly. A person who autofills and clicks right away just waits a moment.
+    const early = MIN_FILL_MS - (Date.now() - loadedAt);
+    if (early > 0) await new Promise((resolve) => setTimeout(resolve, early));
 
     const now = Date.now();
     while (attempts.length && now - attempts[0] > 60000) attempts.shift();
-    if (attempts.length >= MAX_ATTEMPTS) return say(MESSAGES.tooMany, 'error');
+    if (attempts.length >= MAX_ATTEMPTS) {
+      unbusy();
+      return say(MESSAGES.tooMany, 'error');
+    }
     attempts.push(now);
 
     if (responds === 'navigate') {
+      unbusy(); // usable again if the visitor comes back with the Back button
       email.value = address;
       form.submit();
       return;
@@ -117,10 +134,6 @@ function enhance(form) {
     for (const input of form.querySelectorAll('input[type="hidden"]')) body.append(input.name, input.value);
     body.append(email.name, address);
 
-    busy = true;
-    button.disabled = true;
-    button.classList.add('is-loading');
-    say('');
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
@@ -153,9 +166,7 @@ function enhance(form) {
       say(MESSAGES.network, 'error');
     } finally {
       clearTimeout(timer);
-      busy = false;
-      button.disabled = false;
-      button.classList.remove('is-loading');
+      unbusy();
     }
   });
 }
@@ -192,6 +203,10 @@ function enhanceMenu(toggle) {
       setOpen(false);
       toggle.focus();
     }
+  });
+  // The full-screen menu only exists on phones (site.css); don't leave it open, with scrolling locked, on wider screens.
+  window.matchMedia('(max-width: 760px)').addEventListener('change', (event) => {
+    if (!event.matches && menu.classList.contains('is-open')) setOpen(false);
   });
 }
 

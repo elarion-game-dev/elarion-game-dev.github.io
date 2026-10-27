@@ -64,11 +64,12 @@ export async function build({ log = console.log } = {}) {
     await writeFile(target, contents);
   }
 
-  // Cheap guards against template mistakes reaching production.
+  // Cheap guards against template mistakes reaching production. A missing value fills a whole attribute or
+  // element, so only those spots are checked; a post that merely mentions "NaN" still builds.
   for (const [file, contents] of Object.entries(files)) {
     if (!file.endsWith('.html')) continue;
     if (!contents.includes('http-equiv="Content-Security-Policy"')) throw new Error(`${file} is missing its Content-Security-Policy`);
-    if (/\b(undefined|NaN|\[object Object\])\b/.test(contents)) throw new Error(`${file} contains "undefined", "NaN" or "[object Object]"`);
+    if (/="(undefined|NaN)"|>(undefined|NaN)<|\[object Object\]/.test(contents)) throw new Error(`${file} contains "undefined", "NaN" or "[object Object]"`);
   }
 
   log(`Built ${Object.keys(files).length} files into dist/ in ${Date.now() - started} ms (version ${version}).`);

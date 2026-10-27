@@ -7,7 +7,7 @@ import { markdown } from '../src/markdown.mjs';
 import { resolveProvider } from '../src/providers.mjs';
 import { renderPage, renderSite } from '../src/render.mjs';
 import { DEFAULT_SETTINGS, normalizeSettings } from '../src/settings.mjs';
-import { contrastReport, PRESETS } from '../src/themes.mjs';
+import { contrast, contrastReport, PRESETS } from '../src/themes.mjs';
 import { safeAssetPath, safeUrl } from '../src/util.mjs';
 
 let passed = 0;
@@ -315,6 +315,26 @@ await test('Default settings are stable', () => {
 await test('Every preset passes WCAG AA for text and buttons', () => {
   for (const [id, preset] of Object.entries(PRESETS)) {
     for (const check of contrastReport(preset.colors)) assert.ok(check.pass, `${id}: ${check.label} is ${check.ratio.toFixed(2)}:1`);
+  }
+});
+
+await test('Impossible calendar dates are dropped', () => {
+  const s = structuredClone(DEFAULT_SETTINGS);
+  s.news.posts = [{ ...s.news.posts[0], date: '2026-02-30' }, { ...s.news.posts[0], slug: 'b', date: '2026-13-01' }, { ...s.news.posts[0], slug: 'c', date: '2028-02-29' }];
+  assert.deepEqual(normalizeSettings(s).news.posts.map((p) => p.date), ['', '', '2028-02-29']);
+});
+
+await test('Press images use the preview resolver, like every other image', () => {
+  const s = normalizeSettings({ ...DEFAULT_SETTINGS, press: { ...DEFAULT_SETTINGS.press, images: [{ src: '/assets/uploads/shot.jpg', caption: '' }] } });
+  const html = renderPage(s, 'press', { preview: true, resolveImage: (src) => `blob:x${src}` });
+  assert.ok(html.includes('src="blob:x/assets/uploads/shot.jpg"') && html.includes('src="blob:x/assets/press/elarion-logo-light.png"'));
+});
+
+await test('Error text stays readable on every preset', () => {
+  for (const [id, preset] of Object.entries(PRESETS)) {
+    const css = renderSite(normalizeSettings({ ...DEFAULT_SETTINGS, theme: { ...DEFAULT_SETTINGS.theme, colors: preset.colors } }))['assets/css/theme.css'];
+    const danger = css.match(/--danger: (#[0-9a-f]{6});/)[1];
+    assert.ok(contrast(danger, preset.colors.bg) >= 4.5, `${id}: error text ${danger} is ${contrast(danger, preset.colors.bg).toFixed(2)}:1`);
   }
 });
 

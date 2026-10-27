@@ -305,6 +305,8 @@ function signOut() {
   Object.assign(app, { gh: null, user: null, settings: null, savedJson: '', fileSha: '' });
   app.uploads.clear();
   app.blobUrls.clear();
+  undoStack.length = 0;
+  redoStack.length = 0;
   showLogin('Signed out.');
 }
 
@@ -435,8 +437,9 @@ function togglePreview(show) {
 
 // --- change tracking -----------------------------------------------------------------------
 
+// Uploads only count once the settings point at them; publish() commits just those.
 function isDirty() {
-  return app.uploads.size > 0 || serialize(app.normalized()) !== app.savedJson;
+  return serialize(app.normalized()) !== app.savedJson;
 }
 
 let previewTimer;
@@ -480,8 +483,8 @@ async function discard() {
   const choice = await confirmDialog({ title: 'Discard unpublished changes?', body: 'The editor goes back to what is currently published. Undo (Ctrl+Z) brings your changes back.', confirm: 'Discard', danger: true });
   if (choice !== 'ok') return;
   remember();
+  // Pending uploads are kept: Undo can bring back the settings that use them.
   app.settings = JSON.parse(app.savedJson);
-  app.uploads.clear();
   changed();
   renderPanel();
 }
@@ -734,10 +737,15 @@ async function publish({ force = false } = {}) {
     });
     app.fileSha = blobs[SETTINGS_PATH];
     app.savedJson = json;
-    app.settings = structuredClone(normalized);
-    app.uploads.clear();
+    for (const [sitePath] of uploads) app.uploads.delete(sitePath);
+    // Edits made while publishing stay in the editor as unpublished changes.
+    if (serialize(app.normalized()) === json) {
+      app.settings = structuredClone(normalized);
+      renderPanel();
+    } else {
+      updateReverts();
+    }
     toast('Published. The live site updates in about a minute.');
-    renderPanel();
     watchDeploy(commit.sha);
   } catch (error) {
     if (error instanceof ConflictError) conflict = true;
@@ -766,7 +774,6 @@ async function reloadFromGitHub() {
   const settings = normalizeSettings(JSON.parse(file.text));
   remember();
   Object.assign(app, { fileSha: file.sha, savedJson: serialize(settings), settings: structuredClone(settings) });
-  app.uploads.clear();
   changed();
   renderPanel();
   toast('Loaded the latest published settings.');
@@ -900,7 +907,8 @@ const saved = storedToken();
 if (saved) {
   root.replaceChildren(h('div', { class: 'login' }, h('p', { class: 'muted' }, 'Signing in…')));
   signIn(saved.token, saved.remembered).catch((error) => {
-    clearToken();
+    // Forget the token only when GitHub rejects it, not on a dropped connection or a rate limit.
+    if (error.status === 401 || error.status === 404 || (error.status === 403 && !/rate limit/i.test(error.message))) clearToken();
     showLogin(explain(error));
   });
 } else {

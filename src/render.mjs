@@ -538,7 +538,7 @@ function factsheet(settings, ctx, section) {
   return `<h2 id="press-factsheet-title">${esc(section.heading)}</h2>\n      <dl class="facts">${rows.join('')}</dl>`;
 }
 
-function pressContent(settings, id) {
+function pressContent(settings, ctx, id) {
   const pr = settings.press;
   switch (id) {
     case 'description':
@@ -552,7 +552,7 @@ function pressContent(settings, id) {
         ? `<div class="press-gallery">${items
             .map(
               (i) => `<figure class="press-image">
-          <a href="${esc(i.src)}" download><img src="${esc(i.src)}" alt="${esc(i.caption)}" loading="lazy" decoding="async"></a>
+          <a href="${esc(i.src)}" download><img src="${esc(ctx.img(i.src))}" alt="${esc(i.caption)}" loading="lazy" decoding="async"></a>
           <figcaption>${i.caption ? `<span>${esc(i.caption)}</span>` : ''}<a class="download-link" href="${esc(i.src)}" download>${icon('download')}Download</a></figcaption>
         </figure>`
             )
@@ -565,7 +565,7 @@ function pressContent(settings, id) {
         ? `<div class="press-logos">${items
             .map(
               (i) => `<figure class="press-logo">
-          <div class="press-logo-tile tile-${i.background}"><img src="${esc(i.src)}" alt="${esc(i.label)}" loading="lazy" decoding="async"></div>
+          <div class="press-logo-tile tile-${i.background}"><img src="${esc(ctx.img(i.src))}" alt="${esc(i.label)}" loading="lazy" decoding="async"></div>
           <figcaption>${i.label ? `<span>${esc(i.label)}</span>` : ''}<a class="download-link" href="${esc(i.src)}" download>${icon('download')}Download</a></figcaption>
         </figure>`
             )
@@ -618,7 +618,7 @@ function pressPage(settings, ctx) {
   const sections = enabled
     .filter((s) => s.id !== 'factsheet')
     .map((s) => {
-      const content = pressContent(settings, s.id);
+      const content = pressContent(settings, ctx, s.id);
       return content
         ? `<section class="press-section" id="press-${s.id}" aria-labelledby="press-${s.id}-title">
         <h2 id="press-${s.id}-title">${esc(s.heading)}</h2>

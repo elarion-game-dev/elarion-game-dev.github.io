@@ -14,6 +14,7 @@
   --ok: #4ade80;
   --warn: #fbbf24;
   --danger: #f87171;
+  --on-danger: #1a0505;
   --radius: 10px;
   --stage: #0a0b0f;
   --shadow: 0 18px 50px -20px rgb(0 0 0 / 0.6);
@@ -29,12 +30,13 @@
     --text: #151821;
     --muted: #5d6477;
     --accent: #c97a12;
-    --on-accent: #ffffff;
+    --on-accent: #1d1405; /* white on this amber is only 3.4:1 */
     --accent-soft: rgb(201 122 18 / 0.12);
     --focus: #5b45e0;
     --ok: #15803d;
     --warn: #b45309;
     --danger: #c62828;
+    --on-danger: #ffffff;
     --stage: #e3e5ec;
     --shadow: 0 18px 40px -24px rgb(20 24 40 / 0.35);
     color-scheme: light;
@@ -171,7 +173,7 @@ p {
 
 .btn-danger {
   background: var(--danger);
-  color: #fff;
+  color: var(--on-danger);
 }
 
 .danger-text {
@@ -1504,7 +1506,9 @@ body:has(.shell) {
     gap: 0.5rem 0.75rem;
   }
 
+  /* Publish and the account menu must stay reachable on phones. */
   .topbar-actions {
+    flex-wrap: wrap;
     width: 100%;
   }
 

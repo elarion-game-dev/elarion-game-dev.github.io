@@ -32,7 +32,12 @@ const TYPES = {
 
 // Returns a file path, { redirect } for directories without a trailing slash (like GitHub Pages), or null.
 async function resolveFile(urlPath) {
-  const clean = decodeURIComponent(urlPath.split('?')[0]);
+  let clean;
+  try {
+    clean = decodeURIComponent(urlPath.split('?')[0]);
+  } catch {
+    return null; // malformed escape such as "/%"
+  }
   const target = path.resolve(dist, '.' + clean);
   if (target !== dist && !target.startsWith(dist + path.sep)) return null;
   try {

@@ -5,7 +5,6 @@
   --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
   --accent-2-soft: color-mix(in srgb, var(--accent-2) 22%, transparent);
   --star: color-mix(in srgb, var(--text) 80%, transparent);
-  --danger: light-dark(#b42318, #ff8f85);
   --band: light-dark(var(--surface), color-mix(in srgb, var(--bg) 45%, #000));
   --shadow: 0 24px 60px -28px color-mix(in srgb, #000 70%, transparent);
   --container: 1160px;
@@ -657,6 +656,7 @@ main {
   line-height: 1.2;
   margin-bottom: 1.5rem;
   text-wrap: wrap;
+  overflow-wrap: break-word; /* a long single word wraps on narrow phones instead of being cut off */
 }
 
 .home-about .prose {
@@ -744,9 +744,9 @@ main {
 }
 
 .input:focus {
-  outline: none;
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
 .input[aria-invalid='true'] {
@@ -818,8 +818,9 @@ label.consent {
   text-align: center;
 }
 
+/* Kept in the accessibility tree while empty, so screen readers announce the message when it appears. */
 .form-status:empty {
-  display: none;
+  margin: 0;
 }
 
 .form-status[data-tone='error'] {
@@ -908,7 +909,7 @@ label.consent {
   align-items: center;
   justify-content: center;
   gap: 0.8rem;
-  max-width: 460px; /* same width as the form that replaces it */
+  max-width: 400px; /* same width as the form that replaces it (.signup) */
   margin-inline: auto;
   padding: 1.1rem 1.2rem;
   border: 1px dashed color-mix(in srgb, var(--accent) 50%, transparent);
@@ -1706,7 +1707,11 @@ main:has(> .social-band:not(.social-plain):last-child) + .site-footer {
     z-index: 70;
     display: none;
     flex-direction: column;
+    flex-wrap: nowrap;
     justify-content: center;
+    justify-content: safe center; /* tall menus (landscape, large text) start at the top and scroll */
+    overflow-y: auto;
+    overscroll-behavior: contain;
     gap: 2rem;
     width: auto;
     max-width: none;
@@ -1717,6 +1722,7 @@ main:has(> .social-band:not(.social-plain):last-child) + .site-footer {
   .nav-bar::before,
   [data-nav='classic'] .nav-bar::before {
     display: block;
+    position: fixed; /* stays put while the menu scrolls */
     clip-path: none !important;
     border-radius: 0;
     background: var(--nav-bg);
@@ -1765,7 +1771,7 @@ main:has(> .social-band:not(.social-plain):last-child) + .site-footer {
   }
 
   .menu-close {
-    position: absolute;
+    position: fixed; /* reachable while the menu scrolls */
     top: 12px;
     left: 16px;
   }

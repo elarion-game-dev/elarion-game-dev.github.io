@@ -55,7 +55,7 @@ Until a provider is connected, the form shows a "coming soon" message instead of
 | Content Security Policy | Strict policy on every page: `default-src 'none'`, scripts, styles and images only from this site, network access only to the configured email provider. No `unsafe-inline`. |
 | Tracking | No cookies, analytics, ads or third-party scripts, so no cookie banner is needed. Nothing is stored in visitors' browsers. |
 | Third parties | Fonts and all images are hosted on this site (images must be uploaded; remote image URLs are rejected). Page visits contact no other servers. Videos in the press kit are links, not embeds. |
-| Consent | Double opt-in at the provider, plus a consent statement linking the privacy policy under the form. An unticked, required checkbox can be switched on in the admin. |
+| Consent | Double opt-in at the provider. The privacy policy is linked in every page footer. An optional consent statement, or an unticked required checkbox, can be switched on in the admin. |
 | Bots | Hidden honeypot field, minimum fill time, 4 attempts/minute limit; the provider's own spam checks on top. |
 | Privacy policy | Generated at `/privacy/` from the admin settings: controller, purposes, legal bases, processors, transfers, retention, rights. Optional legal notice (Impressum) at `/legal/`. |
 | Transport | HTTPS with HSTS (GitHub Pages). `strict-origin-when-cross-origin` referrer policy. |

@@ -231,7 +231,9 @@ const bool = (value, fallback) => (typeof value === 'boolean' ? value : fallback
 const oneOf = (value, options, fallback) => (options.includes(value) ? value : fallback);
 const color = (value, fallback) => (isHexColor(value) ? value.toLowerCase() : fallback);
 const num = (value, min, max, fallback) => (Number.isFinite(Number(value)) && value !== '' && value !== null ? Math.round(clamp(value, min, max)) : fallback);
-const date = (value, fallback = '') => (/^\d{4}-\d{2}-\d{2}$/.test(String(value ?? '')) ? value : fallback);
+// A real calendar day: "2026-02-30" would otherwise show as 2 March.
+const date = (value, fallback = '') =>
+  /^\d{4}-\d{2}-\d{2}$/.test(String(value ?? '')) && !Number.isNaN(Date.parse(value)) && new Date(`${value}T00:00:00Z`).toISOString().startsWith(value) ? value : fallback;
 const list = (value, max, fallback) => (Array.isArray(value) ? value.slice(0, max) : fallback);
 const obj = (value) => (isPlainObject(value) ? value : {});
 const link = (value) => safeUrl(line(value, 500, ''));
